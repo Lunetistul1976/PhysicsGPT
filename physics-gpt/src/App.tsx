@@ -1,11 +1,19 @@
 import React from "react";
+import styled from "styled-components";
+import { MainPage } from "./components/MainPage";
 
-function App() {
+export const App = () => {
   return (
-    <div>
-      <h1> Hello World</h1>
-    </div>
+    <Container>
+      <MainPage />
+    </Container>
   );
-}
+};
 
-export default App;
+const Container = styled.div`
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+`;
