@@ -9,9 +9,39 @@ import {
   WarningAlt,
   Image,
 } from "@carbon/icons-react";
+import { chatGPT, chatGptApiKey } from "../utils/constants";
 
 export const MainPage = () => {
   const theme = useTheme();
+
+  const optionsAPIChat = {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${chatGptApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      store: true,
+      messages: [
+        {
+          role: "user",
+          content: `What is the difference between classical mechanics and quantum mechanics?. 
+          I want you to provide me the answer in a json object format. The object will have a description key with the answer.`,
+        },
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 500,
+    }),
+  };
+
+  const getChatResponse = async () => {
+    console.log("Getting chat response...");
+    const response = await fetch(chatGPT, optionsAPIChat);
+    const data = await response.json();
+    console.log(data);
+  };
+
   return (
     <Container>
       <TitleAndExamplesContainer>
@@ -116,7 +146,7 @@ export const MainPage = () => {
           slotProps={{
             input: {
               endAdornment: (
-                <IconButton>
+                <IconButton onClick={getChatResponse}>
                   <Send size={20} />
                 </IconButton>
               ),
