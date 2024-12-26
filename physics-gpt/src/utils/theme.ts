@@ -5,6 +5,7 @@ export const lightTheme = createTheme({
     mode: "light",
     primary: {
       main: "#007bff",
+      light: "#f7f9fb",
     },
     secondary: {
       main: "#6c757d",
@@ -28,6 +29,7 @@ export const darkTheme = createTheme({
     mode: "dark",
     primary: {
       main: "#1e90ff",
+      light: "rgba(255, 255, 255, 0.05)",
     },
     secondary: {
       main: "#bbbbbb",

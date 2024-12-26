@@ -1,9 +1,17 @@
 import React from "react";
 import styled from "styled-components";
-import { Typography } from "@mui/material";
-import { Chat, LogoReact } from "@carbon/icons-react";
+import { IconButton, TextField, Typography, useTheme } from "@mui/material";
+import {
+  Chat,
+  DataEnrichment,
+  LogoReact,
+  Send,
+  WarningAlt,
+  Image,
+} from "@carbon/icons-react";
 
 export const MainPage = () => {
+  const theme = useTheme();
   return (
     <Container>
       <TitleAndExamplesContainer>
@@ -16,83 +24,111 @@ export const MainPage = () => {
         <ExamplesAndCapabilitiesContainer>
           <Section>
             <SectionTitleContainer>
-              <Chat />
-              <Typography color="textPrimary" variant="subtitle1">
+              <Chat size={24} />
+              <Typography color="textPrimary" variant="h6">
                 Examples
               </Typography>
             </SectionTitleContainer>
-            <MessageContainer>
+            <MessageContainer bgColor={theme.palette.primary.light}>
               <Typography color="textPrimary" variant="body2">
-                "Explain quantum computing in simple terms"
+                What is the difference between classical mechanics and quantum
+                mechanics?
               </Typography>
             </MessageContainer>
 
-            <MessageContainer>
+            <MessageContainer bgColor={theme.palette.primary.light}>
               <Typography color="textPrimary" variant="body2">
-                "Explain quantum computing in simple terms"
+                Explain the theory of relativity in simple terms.
               </Typography>
             </MessageContainer>
 
-            <MessageContainer>
+            <MessageContainer bgColor={theme.palette.primary.light}>
               <Typography color="textPrimary" variant="body2">
-                "Explain quantum computing in simple terms"
+                How does a black hole form and what are its properties?
               </Typography>
             </MessageContainer>
           </Section>
 
           <Section>
             <SectionTitleContainer>
-              <Chat />
-              <Typography color="textPrimary" variant="subtitle1">
+              <DataEnrichment size={24} />
+              <Typography color="textPrimary" variant="h6">
                 Capabilities
               </Typography>
             </SectionTitleContainer>
-            <MessageContainer>
+            <MessageContainer bgColor={theme.palette.primary.light}>
               <Typography color="textPrimary" variant="body2">
-                "Explain quantum computing in simple terms"
+                Able to break down complex physics concepts into simpler
+                explanations.
               </Typography>
             </MessageContainer>
 
-            <MessageContainer>
+            <MessageContainer bgColor={theme.palette.primary.light}>
               <Typography color="textPrimary" variant="body2">
-                "Explain quantum computing in simple terms"
+                Provides insights into theoretical and applied physics topics.
               </Typography>
             </MessageContainer>
 
-            <MessageContainer>
+            <MessageContainer bgColor={theme.palette.primary.light}>
               <Typography color="textPrimary" variant="body2">
-                "Explain quantum computing in simple terms"
+                Explains phenomena across classical, quantum, and astrophysics
+                domains.
               </Typography>
             </MessageContainer>
           </Section>
 
           <Section>
             <SectionTitleContainer>
-              <Chat />
-              <Typography color="textPrimary" variant="subtitle1">
+              <WarningAlt size={24} />
+              <Typography color="textPrimary" variant="h6">
                 Limitations
               </Typography>
             </SectionTitleContainer>
-            <MessageContainer>
+            <MessageContainer bgColor={theme.palette.primary.light}>
               <Typography color="textPrimary" variant="body2">
-                "Explain quantum computing in simple terms"
+                May not account for the most recent physics research or
+                experimental results.
               </Typography>
             </MessageContainer>
 
-            <MessageContainer>
+            <MessageContainer bgColor={theme.palette.primary.light}>
               <Typography color="textPrimary" variant="body2">
-                "Explain quantum computing in simple terms"
+                Cannot perform complex physics calculations or numerical
+                simulations.
               </Typography>
             </MessageContainer>
 
-            <MessageContainer>
+            <MessageContainer bgColor={theme.palette.primary.light}>
               <Typography color="textPrimary" variant="body2">
-                "Explain quantum computing in simple terms"
+                Responses may not fully address niche or controversial physics
+                topics.
               </Typography>
             </MessageContainer>
           </Section>
         </ExamplesAndCapabilitiesContainer>
       </TitleAndExamplesContainer>
+      <InputContainer>
+        <StyledTextField
+          fullWidth
+          autoComplete="off"
+          color="secondary"
+          bgColor={theme.palette.primary.light}
+          slotProps={{
+            input: {
+              endAdornment: (
+                <IconButton>
+                  <Send size={20} />
+                </IconButton>
+              ),
+              startAdornment: (
+                <IconButton>
+                  <Image size={20} />
+                </IconButton>
+              ),
+            },
+          }}
+        />
+      </InputContainer>
     </Container>
   );
 };
@@ -101,7 +137,7 @@ const Container = styled.div`
   align-items: center;
   display: flex;
   flex-direction: column;
-  gap: 200px;
+  gap: 232px;
   padding: 32px;
   height: 100%;
   justify-content: center;
@@ -136,14 +172,30 @@ const Section = styled.div`
 `;
 
 const SectionTitleContainer = styled.div`
+  align-items: center;
   display: flex;
   flex-direction: column;
   gap: 8px;
 `;
 
-const MessageContainer = styled.div`
-  background-color: ${({ theme }) => theme.palette?.grey[100]};
+const MessageContainer = styled.div<{ bgColor: string }>`
+  background-color: ${({ bgColor }) => bgColor};
+  border-radius: 8px;
   padding: 4px 8px;
   max-width: 280px;
   width: 100%;
+`;
+
+const InputContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  width: 100%;
+`;
+
+const StyledTextField = styled(TextField)<{ bgColor: string }>`
+  max-width: 760px;
+  & .MuiOutlinedInput-root {
+    border-radius: 16px;
+    background-color: ${({ bgColor }) => bgColor};
+  }
 `;
