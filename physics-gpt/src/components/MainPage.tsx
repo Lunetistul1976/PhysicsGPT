@@ -1,6 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
-import { IconButton, TextField, Typography, useTheme } from "@mui/material";
+import {
+  CircularProgress,
+  IconButton,
+  TextField,
+  Typography,
+  useTheme,
+} from "@mui/material";
 import {
   Chat,
   DataEnrichment,
@@ -10,9 +16,17 @@ import {
   Image,
 } from "@carbon/icons-react";
 import { chatGPT, chatGptApiKey } from "../utils/constants";
+import { getPromptMessage } from "../utils/getPromptMessage";
+
+type ChatResponse = {
+  response: string;
+};
 
 export const MainPage = () => {
   const theme = useTheme();
+  const [message, setMessage] = useState("");
+  const [chatResponse, setChatResponse] = useState<ChatResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const optionsAPIChat = {
     method: "POST",
@@ -26,8 +40,7 @@ export const MainPage = () => {
       messages: [
         {
           role: "user",
-          content: `What is the difference between classical mechanics and quantum mechanics?. 
-          I want you to provide me the answer in a json object format. The object will have a description key with the answer.`,
+          content: getPromptMessage(message),
         },
       ],
       response_format: { type: "json_object" },
@@ -36,11 +49,16 @@ export const MainPage = () => {
   };
 
   const getChatResponse = async () => {
-    console.log("Getting chat response...");
+    setIsLoading(true);
     const response = await fetch(chatGPT, optionsAPIChat);
     const data = await response.json();
-    console.log(data);
+    setIsLoading(false);
+    setMessage("");
+    const strippedResponse = data.choices[0].message.content.replace(/"/g, "");
+    setChatResponse(strippedResponse);
   };
+
+  console.log(chatResponse);
 
   return (
     <Container>
@@ -59,20 +77,20 @@ export const MainPage = () => {
                 Examples
               </Typography>
             </SectionTitleContainer>
-            <MessageContainer bgColor={theme.palette.primary.light}>
+            <MessageContainer $bgColor={theme.palette.primary.light}>
               <Typography color="textPrimary" variant="body2">
                 What is the difference between classical mechanics and quantum
                 mechanics?
               </Typography>
             </MessageContainer>
 
-            <MessageContainer bgColor={theme.palette.primary.light}>
+            <MessageContainer $bgColor={theme.palette.primary.light}>
               <Typography color="textPrimary" variant="body2">
                 Explain the theory of relativity in simple terms.
               </Typography>
             </MessageContainer>
 
-            <MessageContainer bgColor={theme.palette.primary.light}>
+            <MessageContainer $bgColor={theme.palette.primary.light}>
               <Typography color="textPrimary" variant="body2">
                 How does a black hole form and what are its properties?
               </Typography>
@@ -86,20 +104,20 @@ export const MainPage = () => {
                 Capabilities
               </Typography>
             </SectionTitleContainer>
-            <MessageContainer bgColor={theme.palette.primary.light}>
+            <MessageContainer $bgColor={theme.palette.primary.light}>
               <Typography color="textPrimary" variant="body2">
                 Able to break down complex physics concepts into simpler
                 explanations.
               </Typography>
             </MessageContainer>
 
-            <MessageContainer bgColor={theme.palette.primary.light}>
+            <MessageContainer $bgColor={theme.palette.primary.light}>
               <Typography color="textPrimary" variant="body2">
                 Provides insights into theoretical and applied physics topics.
               </Typography>
             </MessageContainer>
 
-            <MessageContainer bgColor={theme.palette.primary.light}>
+            <MessageContainer $bgColor={theme.palette.primary.light}>
               <Typography color="textPrimary" variant="body2">
                 Explains phenomena across classical, quantum, and astrophysics
                 domains.
@@ -114,21 +132,21 @@ export const MainPage = () => {
                 Limitations
               </Typography>
             </SectionTitleContainer>
-            <MessageContainer bgColor={theme.palette.primary.light}>
+            <MessageContainer $bgColor={theme.palette.primary.light}>
               <Typography color="textPrimary" variant="body2">
                 May not account for the most recent physics research or
                 experimental results.
               </Typography>
             </MessageContainer>
 
-            <MessageContainer bgColor={theme.palette.primary.light}>
+            <MessageContainer $bgColor={theme.palette.primary.light}>
               <Typography color="textPrimary" variant="body2">
                 Cannot perform complex physics calculations or numerical
                 simulations.
               </Typography>
             </MessageContainer>
 
-            <MessageContainer bgColor={theme.palette.primary.light}>
+            <MessageContainer $bgColor={theme.palette.primary.light}>
               <Typography color="textPrimary" variant="body2">
                 Responses may not fully address niche or controversial physics
                 topics.
@@ -141,17 +159,25 @@ export const MainPage = () => {
         <StyledTextField
           fullWidth
           autoComplete="off"
+          onChange={(event) => setMessage(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              getChatResponse();
+            }
+          }}
           color="secondary"
-          bgColor={theme.palette.primary.light}
+          $bgColor={theme.palette.primary.light}
           slotProps={{
             input: {
-              endAdornment: (
+              endAdornment: isLoading ? (
+                <CircularProgress size={20} />
+              ) : (
                 <IconButton onClick={getChatResponse}>
                   <Send size={20} />
                 </IconButton>
               ),
               startAdornment: (
-                <IconButton>
+                <IconButton disabled>
                   <Image size={20} />
                 </IconButton>
               ),
@@ -208,8 +234,8 @@ const SectionTitleContainer = styled.div`
   gap: 8px;
 `;
 
-const MessageContainer = styled.div<{ bgColor: string }>`
-  background-color: ${({ bgColor }) => bgColor};
+const MessageContainer = styled.div<{ $bgColor: string }>`
+  background-color: ${({ $bgColor }) => $bgColor};
   border-radius: 8px;
   padding: 4px 8px;
   max-width: 280px;
@@ -222,10 +248,10 @@ const InputContainer = styled.div`
   width: 100%;
 `;
 
-const StyledTextField = styled(TextField)<{ bgColor: string }>`
+const StyledTextField = styled(TextField)<{ $bgColor: string }>`
   max-width: 760px;
   & .MuiOutlinedInput-root {
     border-radius: 16px;
-    background-color: ${({ bgColor }) => bgColor};
+    background-color: ${({ $bgColor }) => $bgColor};
   }
 `;
