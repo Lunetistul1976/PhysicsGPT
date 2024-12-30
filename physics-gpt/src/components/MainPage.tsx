@@ -17,15 +17,20 @@ import {
 } from "@carbon/icons-react";
 import { chatGPT, chatGptApiKey } from "../utils/constants";
 import { getPromptMessage } from "../utils/getPromptMessage";
+import { ResponsePage } from "./ResponsePage";
 
-type ChatResponse = {
+export type ChatResponse = {
+  question: string;
   response: string;
 };
 
 export const MainPage = () => {
   const theme = useTheme();
-  const [message, setMessage] = useState("");
-  const [chatResponse, setChatResponse] = useState<ChatResponse | null>(null);
+  const [messages, setMessages] = useState<string[]>([]);
+  const [currentMessage, setCurrentMessage] = useState("");
+  const [chatResponses, setChatResponses] = useState<ChatResponse[] | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(false);
 
   const optionsAPIChat = {
@@ -40,7 +45,7 @@ export const MainPage = () => {
       messages: [
         {
           role: "user",
-          content: getPromptMessage(message),
+          content: getPromptMessage(currentMessage),
         },
       ],
       response_format: { type: "json_object" },
@@ -49,122 +54,135 @@ export const MainPage = () => {
   };
 
   const getChatResponse = async () => {
+    setMessages([...messages, currentMessage]);
     setIsLoading(true);
     const response = await fetch(chatGPT, optionsAPIChat);
     const data = await response.json();
     setIsLoading(false);
-    setMessage("");
-    const strippedResponse = data.choices[0].message.content.replace(/"/g, "");
-    setChatResponse(strippedResponse);
+    setCurrentMessage("");
+    setChatResponses([
+      ...(chatResponses || []),
+      {
+        question: currentMessage,
+        response: JSON.parse(data.choices[0].message.content).response,
+      },
+    ]);
   };
 
-  console.log(chatResponse);
+  console.log(messages);
 
   return (
-    <Container>
-      <TitleAndExamplesContainer>
-        <TitleAndLogoContainer>
-          <LogoReact size={64} />
-          <Typography color="textPrimary" variant="h4">
-            PhysicsGPT
-          </Typography>
-        </TitleAndLogoContainer>
-        <ExamplesAndCapabilitiesContainer>
-          <Section>
-            <SectionTitleContainer>
-              <Chat size={24} />
-              <Typography color="textPrimary" variant="h6">
-                Examples
-              </Typography>
-            </SectionTitleContainer>
-            <MessageContainer $bgColor={theme.palette.primary.light}>
-              <Typography color="textPrimary" variant="body2">
-                What is the difference between classical mechanics and quantum
-                mechanics?
-              </Typography>
-            </MessageContainer>
+    <Container $hasResponse={!!chatResponses}>
+      {chatResponses ? (
+        <ResponsePage chatResponses={chatResponses} />
+      ) : (
+        <TitleAndExamplesContainer>
+          <TitleAndLogoContainer>
+            <LogoReact size={64} />
+            <Typography color="textPrimary" variant="h4">
+              PhysicsGPT
+            </Typography>
+          </TitleAndLogoContainer>
+          <ExamplesAndCapabilitiesContainer>
+            <Section>
+              <SectionTitleContainer>
+                <Chat size={24} />
+                <Typography color="textPrimary" variant="h6">
+                  Examples
+                </Typography>
+              </SectionTitleContainer>
+              <MessageContainer $bgColor={theme.palette.primary.light}>
+                <Typography color="textPrimary" variant="body2">
+                  What is the difference between classical mechanics and quantum
+                  mechanics?
+                </Typography>
+              </MessageContainer>
 
-            <MessageContainer $bgColor={theme.palette.primary.light}>
-              <Typography color="textPrimary" variant="body2">
-                Explain the theory of relativity in simple terms.
-              </Typography>
-            </MessageContainer>
+              <MessageContainer $bgColor={theme.palette.primary.light}>
+                <Typography color="textPrimary" variant="body2">
+                  Explain the theory of relativity in simple terms.
+                </Typography>
+              </MessageContainer>
 
-            <MessageContainer $bgColor={theme.palette.primary.light}>
-              <Typography color="textPrimary" variant="body2">
-                How does a black hole form and what are its properties?
-              </Typography>
-            </MessageContainer>
-          </Section>
+              <MessageContainer $bgColor={theme.palette.primary.light}>
+                <Typography color="textPrimary" variant="body2">
+                  How does a black hole form and what are its properties?
+                </Typography>
+              </MessageContainer>
+            </Section>
 
-          <Section>
-            <SectionTitleContainer>
-              <DataEnrichment size={24} />
-              <Typography color="textPrimary" variant="h6">
-                Capabilities
-              </Typography>
-            </SectionTitleContainer>
-            <MessageContainer $bgColor={theme.palette.primary.light}>
-              <Typography color="textPrimary" variant="body2">
-                Able to break down complex physics concepts into simpler
-                explanations.
-              </Typography>
-            </MessageContainer>
+            <Section>
+              <SectionTitleContainer>
+                <DataEnrichment size={24} />
+                <Typography color="textPrimary" variant="h6">
+                  Capabilities
+                </Typography>
+              </SectionTitleContainer>
+              <MessageContainer $bgColor={theme.palette.primary.light}>
+                <Typography color="textPrimary" variant="body2">
+                  Able to break down complex physics concepts into simpler
+                  explanations.
+                </Typography>
+              </MessageContainer>
 
-            <MessageContainer $bgColor={theme.palette.primary.light}>
-              <Typography color="textPrimary" variant="body2">
-                Provides insights into theoretical and applied physics topics.
-              </Typography>
-            </MessageContainer>
+              <MessageContainer $bgColor={theme.palette.primary.light}>
+                <Typography color="textPrimary" variant="body2">
+                  Provides insights into theoretical and applied physics topics.
+                </Typography>
+              </MessageContainer>
 
-            <MessageContainer $bgColor={theme.palette.primary.light}>
-              <Typography color="textPrimary" variant="body2">
-                Explains phenomena across classical, quantum, and astrophysics
-                domains.
-              </Typography>
-            </MessageContainer>
-          </Section>
+              <MessageContainer $bgColor={theme.palette.primary.light}>
+                <Typography color="textPrimary" variant="body2">
+                  Explains phenomena across classical, quantum, and astrophysics
+                  domains.
+                </Typography>
+              </MessageContainer>
+            </Section>
 
-          <Section>
-            <SectionTitleContainer>
-              <WarningAlt size={24} />
-              <Typography color="textPrimary" variant="h6">
-                Limitations
-              </Typography>
-            </SectionTitleContainer>
-            <MessageContainer $bgColor={theme.palette.primary.light}>
-              <Typography color="textPrimary" variant="body2">
-                May not account for the most recent physics research or
-                experimental results.
-              </Typography>
-            </MessageContainer>
+            <Section>
+              <SectionTitleContainer>
+                <WarningAlt size={24} />
+                <Typography color="textPrimary" variant="h6">
+                  Limitations
+                </Typography>
+              </SectionTitleContainer>
+              <MessageContainer $bgColor={theme.palette.primary.light}>
+                <Typography color="textPrimary" variant="body2">
+                  May not account for the most recent physics research or
+                  experimental results.
+                </Typography>
+              </MessageContainer>
 
-            <MessageContainer $bgColor={theme.palette.primary.light}>
-              <Typography color="textPrimary" variant="body2">
-                Cannot perform complex physics calculations or numerical
-                simulations.
-              </Typography>
-            </MessageContainer>
+              <MessageContainer $bgColor={theme.palette.primary.light}>
+                <Typography color="textPrimary" variant="body2">
+                  Cannot perform complex physics calculations or numerical
+                  simulations.
+                </Typography>
+              </MessageContainer>
 
-            <MessageContainer $bgColor={theme.palette.primary.light}>
-              <Typography color="textPrimary" variant="body2">
-                Responses may not fully address niche or controversial physics
-                topics.
-              </Typography>
-            </MessageContainer>
-          </Section>
-        </ExamplesAndCapabilitiesContainer>
-      </TitleAndExamplesContainer>
+              <MessageContainer $bgColor={theme.palette.primary.light}>
+                <Typography color="textPrimary" variant="body2">
+                  Responses may not fully address niche or controversial physics
+                  topics.
+                </Typography>
+              </MessageContainer>
+            </Section>
+          </ExamplesAndCapabilitiesContainer>
+        </TitleAndExamplesContainer>
+      )}
+
       <InputContainer>
         <StyledTextField
           fullWidth
           autoComplete="off"
-          onChange={(event) => setMessage(event.target.value)}
+          onChange={(event) => setCurrentMessage(event.target.value)}
+          placeholder="Ask a question about physics..."
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               getChatResponse();
             }
           }}
+          value={currentMessage}
           color="secondary"
           $bgColor={theme.palette.primary.light}
           slotProps={{
@@ -189,11 +207,11 @@ export const MainPage = () => {
   );
 };
 
-const Container = styled.div`
+const Container = styled.div<{ $hasResponse: boolean }>`
   align-items: center;
   display: flex;
   flex-direction: column;
-  gap: 232px;
+  gap: ${({ $hasResponse }) => ($hasResponse ? "120px" : "232px")};
   padding: 32px;
   height: 100%;
   justify-content: center;
