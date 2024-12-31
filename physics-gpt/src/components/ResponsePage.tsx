@@ -3,6 +3,7 @@ import React from "react";
 import { ChatResponse } from "./MainPage";
 import { styled } from "styled-components";
 import { LogoReact } from "@carbon/icons-react";
+import { TypingText } from "./TypingText";
 
 export const ResponsePage = ({
   chatResponses,
@@ -13,17 +14,17 @@ export const ResponsePage = ({
     <ChatContainer>
       {chatResponses.map((chatResponse, index) => (
         <React.Fragment key={index}>
-          <ResponseContainer>
+          <QuestionContainer>
             <Typography color="textPrimary" variant="body1">
               {chatResponse.question}
             </Typography>
-          </ResponseContainer>
+          </QuestionContainer>
           <ResponseContainer>
             <div>
               <LogoReact size={32} />
             </div>
             <Typography color="textPrimary" variant="body1">
-              {chatResponse.response}
+              <TypingText text={chatResponse.response} />
             </Typography>
           </ResponseContainer>
         </React.Fragment>
@@ -33,9 +34,17 @@ export const ResponsePage = ({
 };
 
 const ResponseContainer = styled.div`
-  align-items: flex-start;
   display: flex;
   gap: 16px;
+  justify-content: flex-start;
+  max-width: 600px;
+  text-align: left;
+`;
+
+const QuestionContainer = styled.div`
+  display: flex;
+  gap: 16px;
+  justify-content: flex-end;
   max-width: 600px;
   text-align: left;
 `;
