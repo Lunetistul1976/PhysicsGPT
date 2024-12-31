@@ -3,6 +3,7 @@ import React from "react";
 import { ChatResponse } from "./MainPage";
 import { styled } from "styled-components";
 import { LogoReact } from "@carbon/icons-react";
+import { TypingText } from "./TypingText";
 
 export const ResponsePage = ({
   chatResponses,
@@ -23,7 +24,7 @@ export const ResponsePage = ({
               <LogoReact size={32} />
             </div>
             <Typography color="textPrimary" variant="body1">
-              {chatResponse.response}
+              <TypingText text={chatResponse.response} />
             </Typography>
           </ResponseContainer>
         </React.Fragment>
