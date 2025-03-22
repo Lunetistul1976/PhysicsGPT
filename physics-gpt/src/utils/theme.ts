@@ -22,6 +22,11 @@ export const lightTheme = createTheme({
       secondary: "#6c757d",
     },
   },
+  typography: {
+    button: {
+      textTransform: "none",
+    },
+  },
 });
 
 export const darkTheme = createTheme({
@@ -44,6 +49,11 @@ export const darkTheme = createTheme({
     },
     grey: {
       100: "#9e9e9e",
+    },
+  },
+  typography: {
+    button: {
+      textTransform: "none",
     },
   },
 });

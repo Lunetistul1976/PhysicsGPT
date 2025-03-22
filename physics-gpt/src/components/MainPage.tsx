@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import styled from "styled-components";
 import {
+  Button,
   CircularProgress,
   IconButton,
   TextField,
@@ -14,10 +15,12 @@ import {
   Send,
   WarningAlt,
   Image,
+  Pdf,
 } from "@carbon/icons-react";
 import { chatGPT, chatGptApiKey } from "../utils/constants";
 import { getPromptMessage } from "../utils/getPromptMessage";
 import { ResponsePage } from "./ResponsePage";
+import jsPDF from "jspdf";
 
 export type ChatResponse = {
   question: string;
@@ -32,6 +35,7 @@ export const MainPage = () => {
     null
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [showDownloadButton, setShowDownloadButton] = useState(false);
 
   const optionsAPIChat = {
     method: "POST",
@@ -67,9 +71,36 @@ export const MainPage = () => {
         response: JSON.parse(data.choices[0].message.content).response,
       },
     ]);
+    setShowDownloadButton(true);
   };
 
-  console.log(messages);
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 10;
+    const textWidth = pageWidth - margin * 2;
+
+    // Title configuration
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+
+    const title = chatResponses?.[0].question || "";
+    const titleLines = doc.splitTextToSize(title, textWidth);
+    doc.text(titleLines, pageWidth / 2, 20, { align: "center" });
+
+    const titleHeight = titleLines.length * 10;
+    const contentY = 30 + titleHeight;
+
+    doc.setFont("times", "normal");
+    doc.setFontSize(12);
+    const contentLines = doc.splitTextToSize(
+      chatResponses?.[0].response || "",
+      textWidth
+    );
+    doc.text(contentLines, pageWidth / 2, contentY, { align: "center" });
+
+    doc.save("physics_research.pdf");
+  };
 
   return (
     <Container $hasResponse={!!chatResponses}>
@@ -80,7 +111,7 @@ export const MainPage = () => {
           <TitleAndLogoContainer>
             <LogoReact size={64} />
             <Typography color="textPrimary" variant="h4">
-              PhysicsGPT
+              Deep Research
             </Typography>
           </TitleAndLogoContainer>
           <ExamplesAndCapabilitiesContainer>
@@ -171,38 +202,50 @@ export const MainPage = () => {
         </TitleAndExamplesContainer>
       )}
 
-      <InputContainer>
-        <StyledTextField
-          fullWidth
-          autoComplete="off"
-          onChange={(event) => setCurrentMessage(event.target.value)}
-          placeholder="Ask a question about physics..."
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              getChatResponse();
-            }
-          }}
-          value={currentMessage}
+      {showDownloadButton ? (
+        <Button
           color="secondary"
-          $bgColor={theme.palette.primary.light}
-          slotProps={{
-            input: {
-              endAdornment: isLoading ? (
-                <CircularProgress size={20} />
-              ) : (
-                <IconButton onClick={getChatResponse}>
-                  <Send size={20} />
-                </IconButton>
-              ),
-              startAdornment: (
-                <IconButton disabled>
-                  <Image size={20} />
-                </IconButton>
-              ),
-            },
-          }}
-        />
-      </InputContainer>
+          size="medium"
+          variant="contained"
+          startIcon={<Pdf size={20} />}
+          onClick={generatePDF}
+        >
+          Download
+        </Button>
+      ) : (
+        <InputContainer>
+          <StyledTextField
+            fullWidth
+            autoComplete="off"
+            onChange={(event) => setCurrentMessage(event.target.value)}
+            placeholder="Ask a question about physics..."
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                getChatResponse();
+              }
+            }}
+            value={currentMessage}
+            color="secondary"
+            $bgColor={theme.palette.primary.light}
+            slotProps={{
+              input: {
+                endAdornment: isLoading ? (
+                  <CircularProgress size={20} />
+                ) : (
+                  <IconButton onClick={getChatResponse}>
+                    <Send size={20} />
+                  </IconButton>
+                ),
+                startAdornment: (
+                  <IconButton disabled>
+                    <Image size={20} />
+                  </IconButton>
+                ),
+              },
+            }}
+          />
+        </InputContainer>
+      )}
     </Container>
   );
 };

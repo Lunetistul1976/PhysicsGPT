@@ -1,9 +1,7 @@
-import { Typography } from "@mui/material";
 import React from "react";
 import { ChatResponse } from "./MainPage";
 import { styled } from "styled-components";
-import { LogoReact } from "@carbon/icons-react";
-import { TypingText } from "./TypingText";
+import { RichTextEditor } from "./RichTextEditor";
 
 export const ResponsePage = ({
   chatResponses,
@@ -12,42 +10,13 @@ export const ResponsePage = ({
 }) => {
   return (
     <ChatContainer>
-      {chatResponses.map((chatResponse, index) => (
-        <React.Fragment key={index}>
-          <QuestionContainer>
-            <Typography color="textPrimary" variant="body1">
-              {chatResponse.question}
-            </Typography>
-          </QuestionContainer>
-          <ResponseContainer>
-            <div>
-              <LogoReact size={32} />
-            </div>
-            <Typography color="textPrimary" variant="body1">
-              <TypingText text={chatResponse.response} />
-            </Typography>
-          </ResponseContainer>
-        </React.Fragment>
-      ))}
+      <RichTextEditor
+        question={chatResponses[0].question}
+        response={chatResponses[0].response}
+      />
     </ChatContainer>
   );
 };
-
-const ResponseContainer = styled.div`
-  display: flex;
-  gap: 16px;
-  justify-content: flex-start;
-  max-width: 600px;
-  text-align: left;
-`;
-
-const QuestionContainer = styled.div`
-  display: flex;
-  gap: 16px;
-  justify-content: flex-end;
-  max-width: 600px;
-  text-align: left;
-`;
 
 const ChatContainer = styled.div`
   align-items: center;
