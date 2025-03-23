@@ -22,5 +22,4 @@ const ChatContainer = styled.div`
   align-items: center;
   display: flex;
   flex-direction: column;
-  gap: 16px;
 `;

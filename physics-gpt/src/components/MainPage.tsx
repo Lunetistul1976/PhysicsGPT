@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import {
   Button,
@@ -21,6 +21,7 @@ import { chatGPT, chatGptApiKey } from "../utils/constants";
 import { getPromptMessage } from "../utils/getPromptMessage";
 import { ResponsePage } from "./ResponsePage";
 import jsPDF from "jspdf";
+import { useUserContext } from "../contexts/UserContext";
 
 export type ChatResponse = {
   question: string;
@@ -29,6 +30,7 @@ export type ChatResponse = {
 
 export const MainPage = () => {
   const theme = useTheme();
+  const { setHasModelResponse, hasModelResponse } = useUserContext();
   const [messages, setMessages] = useState<string[]>([]);
   const [currentMessage, setCurrentMessage] = useState("");
   const [chatResponses, setChatResponses] = useState<ChatResponse[] | null>(
@@ -101,6 +103,21 @@ export const MainPage = () => {
 
     doc.save("physics_research.pdf");
   };
+
+  useEffect(() => {
+    if (chatResponses) {
+      setHasModelResponse(true);
+    }
+  }, [chatResponses, setHasModelResponse]);
+
+  useEffect(() => {
+    if (!hasModelResponse) {
+      setChatResponses(null);
+      setMessages([]);
+      setCurrentMessage("");
+      setShowDownloadButton(false);
+    }
+  }, [hasModelResponse]);
 
   return (
     <Container $hasResponse={!!chatResponses}>

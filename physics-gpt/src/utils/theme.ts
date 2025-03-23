@@ -1,5 +1,19 @@
 import { createTheme } from "@mui/material/styles";
 
+const commonComponents = {
+  MuiButton: {
+    styleOverrides: {
+      // Override the sizeLarge variant specifically
+      sizeLarge: {
+        borderRadius: "6px",
+      },
+      sizeMedium: {
+        borderRadius: "6px",
+      },
+    },
+  },
+};
+
 export const lightTheme = createTheme({
   palette: {
     mode: "light",
@@ -21,10 +35,30 @@ export const lightTheme = createTheme({
       primary: "#000000",
       secondary: "#6c757d",
     },
+    divider: "#e0e0e0",
   },
   typography: {
     button: {
       textTransform: "none",
+    },
+  },
+  components: {
+    ...commonComponents,
+    MuiButton: {
+      ...commonComponents.MuiButton,
+      styleOverrides: {
+        ...commonComponents.MuiButton.styleOverrides,
+
+        containedSecondary: {
+          backgroundColor: "#212529", // Black color for secondary
+          color: "#ffffff",
+          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+          "&:hover": {
+            backgroundColor: "#343a40", // Dark gray with slight hint of blue on hover
+            boxShadow: "0 4px 8px rgba(0, 0, 0, 0.15)",
+          },
+        },
+      },
     },
   },
 });
@@ -50,10 +84,28 @@ export const darkTheme = createTheme({
     grey: {
       100: "#9e9e9e",
     },
+    divider: "#424242",
   },
   typography: {
     button: {
       textTransform: "none",
+    },
+  },
+  components: {
+    ...commonComponents,
+    MuiButton: {
+      ...commonComponents.MuiButton,
+      styleOverrides: {
+        ...commonComponents.MuiButton.styleOverrides,
+
+        containedSecondary: {
+          backgroundColor: "#ffffff",
+          color: "#121212",
+          "&:hover": {
+            backgroundColor: "#e0e0e0",
+          },
+        },
+      },
     },
   },
 });
