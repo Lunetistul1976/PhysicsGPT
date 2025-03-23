@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { Container, Paper } from "@mui/material";
@@ -9,18 +9,16 @@ const modules = {
     ["bold", "italic", "underline", "strike"],
     [{ list: "ordered" }, { list: "bullet" }],
     ["link", "image"],
-    ["clean"],
   ],
 };
 
 export const RichTextEditor = ({
-  response,
-  question,
+  content,
+  setContent,
 }: {
-  response: string;
-  question: string;
+  content: string;
+  setContent: React.Dispatch<React.SetStateAction<string>>;
 }) => {
-  const [content, setContent] = useState(response);
   const quillRef = useRef<ReactQuill>(null);
   const theme = useTheme();
 

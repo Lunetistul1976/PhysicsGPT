@@ -1,19 +1,17 @@
-import React from "react";
-import { ChatResponse } from "./MainPage";
+import React, { Dispatch, SetStateAction } from "react";
 import { styled } from "styled-components";
 import { RichTextEditor } from "./RichTextEditor";
 
 export const ResponsePage = ({
-  chatResponses,
+  content,
+  setContent,
 }: {
-  chatResponses: ChatResponse[];
+  content: string;
+  setContent: Dispatch<SetStateAction<string>>;
 }) => {
   return (
     <ChatContainer>
-      <RichTextEditor
-        question={chatResponses[0].question}
-        response={chatResponses[0].response}
-      />
+      <RichTextEditor content={content} setContent={setContent} />
     </ChatContainer>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, {  useEffect, useState } from "react";
 import styled from "styled-components";
 import {
   Button,
@@ -20,8 +20,9 @@ import {
 import { chatGPT, chatGptApiKey } from "../utils/constants";
 import { getPromptMessage } from "../utils/getPromptMessage";
 import { ResponsePage } from "./ResponsePage";
-import jsPDF from "jspdf";
 import { useUserContext } from "../contexts/UserContext";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 export type ChatResponse = {
   question: string;
@@ -31,11 +32,12 @@ export type ChatResponse = {
 export const MainPage = () => {
   const theme = useTheme();
   const { setHasModelResponse, hasModelResponse } = useUserContext();
-  const [messages, setMessages] = useState<string[]>([]);
+  // const [messages, setMessages] = useState<string[]>([]);
   const [currentMessage, setCurrentMessage] = useState("");
-  const [chatResponses, setChatResponses] = useState<ChatResponse[] | null>(
-    null
-  );
+  const [content, setContent] = useState("");
+  // const [chatResponses, setChatResponses] = useState<ChatResponse[] | null>(
+  //   null
+  // );
   const [isLoading, setIsLoading] = useState(false);
   const [showDownloadButton, setShowDownloadButton] = useState(false);
 
@@ -60,69 +62,175 @@ export const MainPage = () => {
   };
 
   const getChatResponse = async () => {
-    setMessages([...messages, currentMessage]);
+    // setMessages([...messages, currentMessage]);
     setIsLoading(true);
     const response = await fetch(chatGPT, optionsAPIChat);
     const data = await response.json();
     setIsLoading(false);
-    setCurrentMessage("");
-    setChatResponses([
-      ...(chatResponses || []),
-      {
-        question: currentMessage,
-        response: JSON.parse(data.choices[0].message.content).response,
-      },
-    ]);
+    // setCurrentMessage("");
+    // setChatResponses([
+    //   ...(chatResponses || []),
+    //   {
+    //     question: currentMessage,
+    //     response: JSON.parse(data.choices[0].message.content).response,
+    //   },
+    // ]);
+    setContent(JSON.parse(data?.choices?.[0].message.content).response || '');
     setShowDownloadButton(true);
   };
 
-  const generatePDF = () => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 10;
-    const textWidth = pageWidth - margin * 2;
+  
 
-    // Title configuration
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
 
-    const title = chatResponses?.[0].question || "";
-    const titleLines = doc.splitTextToSize(title, textWidth);
-    doc.text(titleLines, pageWidth / 2, 20, { align: "center" });
+  const savePdfInLocalStorage = async ({
+    pdfBlob,
+    filename,
+    query,
+  }: {
+    pdfBlob: Blob;
+    filename: string;
+    query: string;
+  }) => {
+    
+    const base64String = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        resolve(base64.split(',')[1]); 
+      };
+      reader.readAsDataURL(pdfBlob);
+    });
+  
+    const pdfsArray = !!localStorage.getItem("pdfs") 
+      ? JSON.parse(localStorage.getItem("pdfs")!) 
+      : [];
 
-    const titleHeight = titleLines.length * 10;
-    const contentY = 30 + titleHeight;
+    const pdfId = pdfsArray.length ? pdfsArray[pdfsArray.length - 1].id + 1 : 1;
 
-    doc.setFont("times", "normal");
-    doc.setFontSize(12);
-    const contentLines = doc.splitTextToSize(
-      chatResponses?.[0].response || "",
-      textWidth
-    );
-    doc.text(contentLines, pageWidth / 2, contentY, { align: "center" });
+    pdfsArray.push({
+      id: pdfId,
+      filename,
+      date: new Date().toISOString(), 
+      query,
+      pdfData: base64String, 
+    });
 
-    doc.save("physics_research.pdf");
+    localStorage.setItem("pdfs", JSON.stringify(pdfsArray));
   };
 
+  const generatePDF =  async () => {
+    const tempDiv = document.createElement("div");
+
+    tempDiv.innerHTML += content;
+
+    // Style for PDF (always use dark text on light background for readability)
+    tempDiv.style.padding = "20px";
+    tempDiv.style.maxWidth = "800px";
+    tempDiv.style.margin = "0 auto";
+    tempDiv.style.backgroundColor = "white";
+    tempDiv.style.color = "black";
+
+    const images = tempDiv.querySelectorAll("img");
+    images.forEach((img) => {
+      if (img.width > 700) {
+        img.style.width = "700px";
+        img.style.height = "auto";
+      }
+    });
+
+    document.body.appendChild(tempDiv);
+    tempDiv.style.position = "absolute";
+    tempDiv.style.left = "-9999px";
+
+    try {
+      tempDiv.style.width = "800px";
+      tempDiv.style.height = "auto";
+      tempDiv.style.overflow = "visible";
+
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        logging: true,
+        backgroundColor: "white",
+        allowTaint: true, // Allow images from other domains
+      });
+
+      // Create PDF
+      const imgData = canvas.toDataURL("image/jpeg", 1.0);
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add first page
+      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Add additional pages if content extends beyond one page
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      // Add metadata
+      pdf.setProperties({
+        title: "Research test",
+        subject: "Research",
+        author: "Deep Research",
+        keywords: "research, AI",
+        creator: "Deep Research",
+      });
+
+      // Generate filename with date
+      const date = new Date().toISOString().slice(0, 10);
+      const filename = `research_${date}.pdf`;
+
+      pdf.save(filename);
+
+      await savePdfInLocalStorage({
+        pdfBlob: pdf.output("blob"),
+        filename,
+        query: currentMessage,
+      })
+
+    } catch (error) {
+      console.log("Error generating PDF:", error);
+    } finally {
+      document.body.removeChild(tempDiv);
+    }
+  }
+  
+
   useEffect(() => {
-    if (chatResponses) {
+    if (content) {
       setHasModelResponse(true);
     }
-  }, [chatResponses, setHasModelResponse]);
+  }, [content, setHasModelResponse]);
 
   useEffect(() => {
     if (!hasModelResponse) {
-      setChatResponses(null);
-      setMessages([]);
+      // setChatResponses(null);
+      // setMessages([]);
       setCurrentMessage("");
+      setContent("");
       setShowDownloadButton(false);
     }
   }, [hasModelResponse]);
 
   return (
-    <Container $hasResponse={!!chatResponses}>
-      {chatResponses ? (
-        <ResponsePage chatResponses={chatResponses} />
+    <Container $hasResponse={!!content}>
+      {content ? (
+        <ResponsePage content={content} setContent={setContent} />
       ) : (
         <TitleAndExamplesContainer>
           <TitleAndLogoContainer>
@@ -225,7 +333,7 @@ export const MainPage = () => {
           size="medium"
           variant="contained"
           startIcon={<Pdf size={20} />}
-          onClick={generatePDF}
+          onClick={() => generatePDF()}
         >
           Download
         </Button>
@@ -266,7 +374,6 @@ export const MainPage = () => {
     </Container>
   );
 };
-
 const Container = styled.div<{ $hasResponse: boolean }>`
   align-items: center;
   display: flex;

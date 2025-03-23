@@ -31,8 +31,6 @@ export const TypingText = ({
     return () => clearInterval(intervalId);
   }, [speed, text]);
 
-  console.log(showCursor);
-
   return (
     <span>
       {displayedText}
