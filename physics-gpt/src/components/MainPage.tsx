@@ -1,4 +1,4 @@
-import React, {  useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import {
   Button,
@@ -17,8 +17,7 @@ import {
   Image,
   Pdf,
 } from "@carbon/icons-react";
-import { chatGPT, chatGptApiKey } from "../utils/constants";
-import { getPromptMessage } from "../utils/getPromptMessage";
+import { systemPrompt } from "../utils/constants";
 import { ResponsePage } from "./ResponsePage";
 import { useUserContext } from "../contexts/UserContext";
 import jsPDF from "jspdf";
@@ -32,55 +31,56 @@ export type ChatResponse = {
 export const MainPage = () => {
   const theme = useTheme();
   const { setHasModelResponse, hasModelResponse } = useUserContext();
-  // const [messages, setMessages] = useState<string[]>([]);
   const [currentMessage, setCurrentMessage] = useState("");
   const [content, setContent] = useState("");
-  // const [chatResponses, setChatResponses] = useState<ChatResponse[] | null>(
-  //   null
-  // );
+
   const [isLoading, setIsLoading] = useState(false);
   const [showDownloadButton, setShowDownloadButton] = useState(false);
 
-  const optionsAPIChat = {
+  const optionsPerplexityApi = {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${chatGptApiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
-      store: true,
+      model: "sonar-deep-research",
       messages: [
         {
-          role: "user",
-          content: getPromptMessage(currentMessage),
+          role: "system",
+          content: systemPrompt,
         },
+        { role: "user", content: currentMessage },
       ],
-      response_format: { type: "json_object" },
       max_tokens: 500,
+      temperature: 0.2,
+      top_p: 0.9,
+      return_images: false,
+      return_related_questions: false,
+      top_k: 0,
+      stream: false,
+      presence_penalty: 0,
+      frequency_penalty: 1,
+      web_search_options: { search_context_size: "medium" },
     }),
   };
 
   const getChatResponse = async () => {
-    // setMessages([...messages, currentMessage]);
     setIsLoading(true);
-    const response = await fetch(chatGPT, optionsAPIChat);
-    const data = await response.json();
-    setIsLoading(false);
-    // setCurrentMessage("");
-    // setChatResponses([
-    //   ...(chatResponses || []),
-    //   {
-    //     question: currentMessage,
-    //     response: JSON.parse(data.choices[0].message.content).response,
-    //   },
-    // ]);
-    setContent(JSON.parse(data?.choices?.[0].message.content).response || '');
-    setShowDownloadButton(true);
+    try {
+      const response = await fetch(
+        "http://localhost:5002/api/research",
+        optionsPerplexityApi
+      );
+      const data = await response.json();
+      console.log("response", data);
+      setIsLoading(false);
+      setContent(JSON.parse(data?.choices?.[0].message.content) || "");
+      setShowDownloadButton(true);
+    } catch (error) {
+      console.log("error", error);
+      setIsLoading(false);
+    }
   };
-
-  
-
 
   const savePdfInLocalStorage = async ({
     pdfBlob,
@@ -91,18 +91,17 @@ export const MainPage = () => {
     filename: string;
     query: string;
   }) => {
-    
     const base64String = await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64 = reader.result as string;
-        resolve(base64.split(',')[1]); 
+        resolve(base64.split(",")[1]);
       };
       reader.readAsDataURL(pdfBlob);
     });
-  
-    const pdfsArray = !!localStorage.getItem("pdfs") 
-      ? JSON.parse(localStorage.getItem("pdfs")!) 
+
+    const pdfsArray = !!localStorage.getItem("pdfs")
+      ? JSON.parse(localStorage.getItem("pdfs")!)
       : [];
 
     const pdfId = pdfsArray.length ? pdfsArray[pdfsArray.length - 1].id + 1 : 1;
@@ -110,15 +109,15 @@ export const MainPage = () => {
     pdfsArray.push({
       id: pdfId,
       filename,
-      date: new Date().toISOString(), 
+      date: new Date().toISOString(),
       query,
-      pdfData: base64String, 
+      pdfData: base64String,
     });
 
     localStorage.setItem("pdfs", JSON.stringify(pdfsArray));
   };
 
-  const generatePDF =  async () => {
+  const generatePDF = async () => {
     const tempDiv = document.createElement("div");
 
     tempDiv.innerHTML += content;
@@ -201,15 +200,13 @@ export const MainPage = () => {
         pdfBlob: pdf.output("blob"),
         filename,
         query: currentMessage,
-      })
-
+      });
     } catch (error) {
       console.log("Error generating PDF:", error);
     } finally {
       document.body.removeChild(tempDiv);
     }
-  }
-  
+  };
 
   useEffect(() => {
     if (content) {
@@ -219,8 +216,6 @@ export const MainPage = () => {
 
   useEffect(() => {
     if (!hasModelResponse) {
-      // setChatResponses(null);
-      // setMessages([]);
       setCurrentMessage("");
       setContent("");
       setShowDownloadButton(false);
@@ -249,20 +244,22 @@ export const MainPage = () => {
               </SectionTitleContainer>
               <MessageContainer $bgColor={theme.palette.primary.light}>
                 <Typography color="textPrimary" variant="body2">
-                  What is the difference between classical mechanics and quantum
-                  mechanics?
+                  What are the latest advancements in quantum computing and
+                  their potential applications in healthcare?
                 </Typography>
               </MessageContainer>
 
               <MessageContainer $bgColor={theme.palette.primary.light}>
                 <Typography color="textPrimary" variant="body2">
-                  Explain the theory of relativity in simple terms.
+                  Analyze socioeconomic drivers of climate change and propose
+                  mitigation strategies.
                 </Typography>
               </MessageContainer>
 
               <MessageContainer $bgColor={theme.palette.primary.light}>
                 <Typography color="textPrimary" variant="body2">
-                  How does a black hole form and what are its properties?
+                  Synthesize current research on neuroplasticity and its
+                  implications for learning and recovery from brain injury.
                 </Typography>
               </MessageContainer>
             </Section>
@@ -276,21 +273,22 @@ export const MainPage = () => {
               </SectionTitleContainer>
               <MessageContainer $bgColor={theme.palette.primary.light}>
                 <Typography color="textPrimary" variant="body2">
-                  Able to break down complex physics concepts into simpler
-                  explanations.
+                  Able to synthesize complex research across multiple academic
+                  disciplines and provide nuanced analysis.
                 </Typography>
               </MessageContainer>
 
               <MessageContainer $bgColor={theme.palette.primary.light}>
                 <Typography color="textPrimary" variant="body2">
-                  Provides insights into theoretical and applied physics topics.
+                  Generates downloadable PDF research documents that can be
+                  saved and shared.
                 </Typography>
               </MessageContainer>
 
               <MessageContainer $bgColor={theme.palette.primary.light}>
                 <Typography color="textPrimary" variant="body2">
-                  Explains phenomena across classical, quantum, and astrophysics
-                  domains.
+                  Supports interactive editing of generated research content for
+                  refinement and customization.
                 </Typography>
               </MessageContainer>
             </Section>
@@ -304,22 +302,22 @@ export const MainPage = () => {
               </SectionTitleContainer>
               <MessageContainer $bgColor={theme.palette.primary.light}>
                 <Typography color="textPrimary" variant="body2">
-                  May not account for the most recent physics research or
-                  experimental results.
+                  May not incorporate the most recent research published in
+                  specialized journals.
                 </Typography>
               </MessageContainer>
 
               <MessageContainer $bgColor={theme.palette.primary.light}>
                 <Typography color="textPrimary" variant="body2">
-                  Cannot perform complex physics calculations or numerical
-                  simulations.
+                  Cannot access proprietary databases, subscription journals, or
+                  perform real-time data analysis and processing.
                 </Typography>
               </MessageContainer>
 
               <MessageContainer $bgColor={theme.palette.primary.light}>
                 <Typography color="textPrimary" variant="body2">
-                  Responses may not fully address niche or controversial physics
-                  topics.
+                  May provide simplified explanations for highly technical or
+                  emerging research topics.
                 </Typography>
               </MessageContainer>
             </Section>
