@@ -14,14 +14,14 @@ import React, { useEffect, useState } from "react";
 import { styled } from "styled-components";
 import { useThemeContext } from "../contexts/ThemeContext";
 import { useUserContext } from "../contexts/UserContext";
+import { getAllPdfs } from "../utils/indexedDb";
 
 interface StoredPdf {
   id: number;
   filename: string;
   date: Date;
   query: string;
-  pdfBlob: Blob;
-  content: string;
+  pdfData: Blob;
 }
 
 export const Sidebar = () => {
@@ -34,33 +34,23 @@ export const Sidebar = () => {
     fetchSavedPdfs();
   }, [hasModelResponse]);
 
-  const fetchSavedPdfs = () => {
-    const pdfsArray = localStorage.getItem("pdfs")
-      ? JSON.parse(localStorage.getItem("pdfs")!)
-      : [];
-
-    const newArray = pdfsArray.map((pdf: any) => {
-      // Convert base64 string to binary data
-      const binaryString = atob(pdf.pdfData);
-      // Convert binary string to Uint8Array
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      // Create Blob from binary data
-      const pdfBlob = new Blob([bytes], { type: "application/pdf" });
-      return {
-        ...pdf,
-        date: new Date(pdf.date),
-        pdfBlob,
-      };
-    });
-
-    setSavedPdfs(newArray);
+  const fetchSavedPdfs = async () => {
+    try {
+      const pdfs = await getAllPdfs();
+      setSavedPdfs(
+        pdfs.map((pdf) => ({
+          ...pdf,
+          date: new Date(pdf.date),
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching PDFs from IndexedDB:", error);
+      setSavedPdfs([]);
+    }
   };
 
   const openPdf = (pdf: StoredPdf) => {
-    const url = URL.createObjectURL(pdf.pdfBlob);
+    const url = URL.createObjectURL(pdf.pdfData);
     window.open(url, "_blank");
   };
 

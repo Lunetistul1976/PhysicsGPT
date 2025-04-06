@@ -15,12 +15,13 @@ import {
   WarningAlt,
   Image,
 } from "@carbon/icons-react";
-import { systemPrompt } from "../utils/constants";
 import { ResponsePage } from "./ResponsePage";
 import { useUserContext } from "../contexts/UserContext";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { processCitationsInContent } from "../utils/processCitations";
+import { getPromptMessage } from "../utils/getPromptMessage";
+import { savePdf } from "../utils/indexedDb";
 
 export type ChatResponse = {
   question: string;
@@ -43,14 +44,8 @@ export const MainPage = () => {
     },
     body: JSON.stringify({
       model: "sonar-deep-research",
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt,
-        },
-        { role: "user", content: currentMessage },
-      ],
-      max_tokens: 2000,
+      messages: [{ role: "user", content: getPromptMessage(currentMessage) }],
+      max_tokens: 3500,
       temperature: 0.2,
       top_p: 0.9,
       return_images: false,
@@ -85,7 +80,7 @@ export const MainPage = () => {
     }
   };
 
-  const savePdfInLocalStorage = async ({
+  const savePdfInIndexedDb = async ({
     pdfBlob,
     filename,
     query,
@@ -94,32 +89,16 @@ export const MainPage = () => {
     filename: string;
     query: string;
   }) => {
-    const base64String = await new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        resolve(base64.split(",")[1]);
-      };
-      reader.readAsDataURL(pdfBlob);
-    });
-
-    const pdfsArray = !!localStorage.getItem("pdfs")
-      ? JSON.parse(localStorage.getItem("pdfs")!)
-      : [];
-
-    const pdfId = pdfsArray.length ? pdfsArray[pdfsArray.length - 1].id + 1 : 1;
-
-    pdfsArray.push({
-      id: pdfId,
-      filename,
-      date: new Date().toISOString(),
-      query,
-      pdfData: base64String,
-    });
-
-    localStorage.setItem("pdfs", JSON.stringify(pdfsArray));
+    try {
+      await savePdf({
+        pdfBlob,
+        filename,
+        query,
+      });
+    } catch (error) {
+      console.error("Error saving PDF to IndexedDB:", error);
+    }
   };
-
   const generatePDF = async () => {
     const tempDiv = document.createElement("div");
 
@@ -212,7 +191,7 @@ export const MainPage = () => {
 
       pdf.save(filename);
 
-      await savePdfInLocalStorage({
+      await savePdfInIndexedDb({
         pdfBlob: pdf.output("blob"),
         filename,
         query: currentMessage,
@@ -366,7 +345,10 @@ export const MainPage = () => {
                 endAdornment: isLoading ? (
                   <CircularProgress size={20} />
                 ) : (
-                  <IconButton onClick={getChatResponse}>
+                  <IconButton
+                    onClick={getChatResponse}
+                    disabled={!currentMessage}
+                  >
                     <Send size={20} />
                   </IconButton>
                 ),

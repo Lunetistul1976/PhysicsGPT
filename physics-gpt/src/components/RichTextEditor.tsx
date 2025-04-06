@@ -53,7 +53,6 @@ const StyledQuillContainer = styled("div")(({ theme }) => ({
     borderBottomRightRadius: "8px",
     border: `1px solid ${theme.palette.divider}`,
     borderTop: "none",
-    minHeight: "200px",
     maxHeight: "600px",
   },
 
@@ -71,6 +70,10 @@ const StyledQuillContainer = styled("div")(({ theme }) => ({
 
   "& .ql-toolbar button:hover": {
     backgroundColor: "rgba(255, 255, 255, 0.1)",
+  },
+
+  "& .ql-editor": {
+    maxHeight: "500px",
   },
 
   // Target all SVG elements and paths in toolbar buttons
