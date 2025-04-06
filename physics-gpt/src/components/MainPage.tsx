@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import {
-  Button,
   CircularProgress,
   IconButton,
   TextField,
@@ -15,13 +14,13 @@ import {
   Send,
   WarningAlt,
   Image,
-  Pdf,
 } from "@carbon/icons-react";
 import { systemPrompt } from "../utils/constants";
 import { ResponsePage } from "./ResponsePage";
 import { useUserContext } from "../contexts/UserContext";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { processCitationsInContent } from "../utils/processCitations";
 
 export type ChatResponse = {
   question: string;
@@ -51,7 +50,7 @@ export const MainPage = () => {
         },
         { role: "user", content: currentMessage },
       ],
-      max_tokens: 500,
+      max_tokens: 2000,
       temperature: 0.2,
       top_p: 0.9,
       return_images: false,
@@ -74,10 +73,14 @@ export const MainPage = () => {
       const data = await response.json();
       console.log("response", data);
       setIsLoading(false);
-      setContent(JSON.parse(data?.choices?.[0].message.content) || "");
+      const content = data?.choices?.[0].message.content;
+      const citations = data?.citations;
+
+      setContent(processCitationsInContent(content, citations));
+
       setShowDownloadButton(true);
     } catch (error) {
-      console.log("error", error);
+      console.error(error);
       setIsLoading(false);
     }
   };
@@ -128,6 +131,19 @@ export const MainPage = () => {
     tempDiv.style.margin = "0 auto";
     tempDiv.style.backgroundColor = "white";
     tempDiv.style.color = "black";
+
+    // Ensure links have proper formatting for PDF conversion
+    const links = tempDiv.querySelectorAll("a");
+    links.forEach((link) => {
+      // Make sure links have proper attributes for PDF conversion
+      link.style.color = "#0000FF";
+      link.style.textDecoration = "none";
+      // Ensure href attribute has quotes
+      const href = link.getAttribute("href");
+      if (href) {
+        link.setAttribute("href", href);
+      }
+    });
 
     const images = tempDiv.querySelectorAll("img");
     images.forEach((img) => {
@@ -225,7 +241,12 @@ export const MainPage = () => {
   return (
     <Container $hasResponse={!!content}>
       {content ? (
-        <ResponsePage content={content} setContent={setContent} />
+        <ResponsePage
+          content={content}
+          setContent={setContent}
+          generatePdf={generatePDF}
+          showDownloadButton={showDownloadButton}
+        />
       ) : (
         <TitleAndExamplesContainer>
           <TitleAndLogoContainer>
@@ -325,17 +346,7 @@ export const MainPage = () => {
         </TitleAndExamplesContainer>
       )}
 
-      {showDownloadButton ? (
-        <Button
-          color="secondary"
-          size="medium"
-          variant="contained"
-          startIcon={<Pdf size={20} />}
-          onClick={() => generatePDF()}
-        >
-          Download
-        </Button>
-      ) : (
+      {!showDownloadButton && (
         <InputContainer>
           <StyledTextField
             fullWidth

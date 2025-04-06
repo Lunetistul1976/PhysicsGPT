@@ -54,6 +54,7 @@ const StyledQuillContainer = styled("div")(({ theme }) => ({
     border: `1px solid ${theme.palette.divider}`,
     borderTop: "none",
     minHeight: "200px",
+    maxHeight: "600px",
   },
 
   "& .ql-toolbar": {

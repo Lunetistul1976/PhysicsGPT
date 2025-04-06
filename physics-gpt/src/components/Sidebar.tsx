@@ -34,9 +34,10 @@ export const Sidebar = () => {
     fetchSavedPdfs();
   }, [hasModelResponse]);
 
-
   const fetchSavedPdfs = () => {
-    const pdfsArray = localStorage.getItem("pdfs") ? JSON.parse(localStorage.getItem("pdfs")!) : [];
+    const pdfsArray = localStorage.getItem("pdfs")
+      ? JSON.parse(localStorage.getItem("pdfs")!)
+      : [];
 
     const newArray = pdfsArray.map((pdf: any) => {
       // Convert base64 string to binary data
@@ -96,6 +97,7 @@ export const Sidebar = () => {
                     backgroundColor: theme.palette.action.hover,
                   },
                 }}
+                title={pdf.query}
               >
                 <ListItemIcon sx={{ minWidth: "36px" }}>
                   <Pdf size={20} />
