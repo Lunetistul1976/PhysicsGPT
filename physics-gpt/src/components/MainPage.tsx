@@ -22,6 +22,7 @@ import html2canvas from "html2canvas";
 import { processCitationsInContent } from "../utils/processCitations";
 import { getPromptMessage } from "../utils/getPromptMessage";
 import { savePdf } from "../utils/indexedDb";
+import { getResponseObject } from "../utils/getResponseObject";
 
 export type ChatResponse = {
   question: string;
@@ -45,7 +46,7 @@ export const MainPage = () => {
     body: JSON.stringify({
       model: "sonar-deep-research",
       messages: [{ role: "user", content: getPromptMessage(currentMessage) }],
-      max_tokens: 3500,
+      max_tokens: 10000,
       temperature: 0.2,
       top_p: 0.9,
       return_images: false,
@@ -66,13 +67,21 @@ export const MainPage = () => {
         optionsPerplexityApi
       );
       const data = await response.json();
-      console.log("response", data);
+
       setIsLoading(false);
       const content = data?.choices?.[0].message.content;
       const citations = data?.citations;
 
-      setContent(processCitationsInContent(content, citations));
+      const contentWithCitations = processCitationsInContent(
+        content,
+        citations
+      );
 
+      const responseObject = getResponseObject(contentWithCitations);
+
+      console.log("response", responseObject);
+
+      setContent(responseObject?.content || "");
       setShowDownloadButton(true);
     } catch (error) {
       console.error(error);
@@ -197,7 +206,7 @@ export const MainPage = () => {
         query: currentMessage,
       });
     } catch (error) {
-      console.log("Error generating PDF:", error);
+      console.error("Error generating PDF:", error);
     } finally {
       document.body.removeChild(tempDiv);
     }
