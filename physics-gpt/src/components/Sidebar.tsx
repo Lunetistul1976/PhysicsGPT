@@ -22,6 +22,7 @@ interface StoredPdf {
   date: Date;
   query: string;
   pdfData: Blob;
+  title: string;
 }
 
 export const Sidebar = () => {
@@ -87,7 +88,7 @@ export const Sidebar = () => {
                     backgroundColor: theme.palette.action.hover,
                   },
                 }}
-                title={pdf.query}
+                title={pdf.title}
               >
                 <ListItemIcon sx={{ minWidth: "36px" }}>
                   <Pdf size={20} />
@@ -95,9 +96,7 @@ export const Sidebar = () => {
                 <ListItemText
                   primary={
                     <Typography noWrap variant="body2">
-                      {pdf.query.length > 25
-                        ? pdf.query.substring(0, 25) + "..."
-                        : pdf.query}
+                      {pdf.title}
                     </Typography>
                   }
                   secondary={

@@ -1,6 +1,7 @@
 export const chatGPT = "https://api.openai.com/v1/chat/completions";
 export const chatGptApiKey = process.env.REACT_APP_CHAT_GPT_API_KEY;
 export const chatGPTModel = "gpt-4o-mini";
+export const chatGptResponse = "https://api.openai.com/v1/responses";
 
 export const deepSeek = "https://api.deepseek.com";
 export const deepSeekApiKey = process.env.REACT_APP_DEEP_SEEK_API_KEY;

@@ -4,6 +4,7 @@ interface StoredPdf {
   date: string;
   query: string;
   pdfData: Blob;
+  title: string;
 }
 
 const DB_NAME = "DeepResearchDB";
@@ -39,6 +40,7 @@ export const savePdf = async (pdfData: {
   pdfBlob: Blob;
   filename: string;
   query: string;
+  title: string;
 }): Promise<number> => {
   const db = await initDb();
 
@@ -51,6 +53,7 @@ export const savePdf = async (pdfData: {
       date: new Date().toISOString(),
       query: pdfData.query,
       pdfData: pdfData.pdfBlob,
+      title: pdfData.title,
     };
 
     const request = store.add(pdf);

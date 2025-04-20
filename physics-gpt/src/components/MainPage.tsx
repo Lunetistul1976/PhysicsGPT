@@ -19,10 +19,10 @@ import { ResponsePage } from "./ResponsePage";
 import { useUserContext } from "../contexts/UserContext";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import { processCitationsInContent } from "../utils/processCitations";
+
 import { getPromptMessage } from "../utils/getPromptMessage";
 import { savePdf } from "../utils/indexedDb";
-import { getResponseObject } from "../utils/getResponseObject";
+import { chatGptResponse } from "../utils/constants";
 
 export type ChatResponse = {
   question: string;
@@ -37,51 +37,99 @@ export const MainPage = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [showDownloadButton, setShowDownloadButton] = useState(false);
+  const [paperTitle, setPaperTitle] = useState("");
 
-  const optionsPerplexityApi = {
+  const researchApi = {
     method: "POST",
     headers: {
+      Authorization: `Bearer ${process.env.REACT_APP_CHAT_GPT_API_KEY}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "sonar-deep-research",
-      messages: [{ role: "user", content: getPromptMessage(currentMessage) }],
-      max_tokens: 10000,
+      model: "gpt-4.1",
+      input: getPromptMessage(currentMessage),
+      max_output_tokens: 1000000,
       temperature: 0.2,
-      top_p: 0.9,
-      return_images: false,
-      return_related_questions: false,
-      top_k: 0,
+      text: {
+        format: {
+          type: "json_schema",
+          name: "research",
+          schema: {
+            type: "object",
+            properties: {
+              content: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  content: { type: "string" },
+                },
+                required: ["title", "content"],
+                additionalProperties: false,
+              },
+              citations: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    title: { type: "string" },
+                    url: { type: "string" },
+                  },
+                  required: ["title", "url"],
+                  additionalProperties: false,
+                },
+                description:
+                  "A list of citations or references used in the research paper.",
+              },
+              assets: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    url: { type: "string" },
+                    description: { type: "string" },
+                  },
+                  required: ["url", "description"],
+                  additionalProperties: false,
+                },
+                description:
+                  "A list of assets or images related to the research paper.",
+              },
+              pdf: {
+                type: "string",
+                description: "The PDF file of the research paper.",
+                additionalProperties: false,
+              },
+            },
+            required: ["content", "citations", "assets", "pdf"],
+            additionalProperties: false,
+          },
+        },
+      },
+      tools: [
+        {
+          type: "web_search_preview",
+          search_context_size: "high",
+        },
+      ],
       stream: false,
-      presence_penalty: 0,
-      frequency_penalty: 1,
-      web_search_options: { search_context_size: "medium" },
     }),
   };
 
   const getChatResponse = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(
-        "http://localhost:5002/api/research",
-        optionsPerplexityApi
-      );
+      const response = await fetch(chatGptResponse, researchApi);
       const data = await response.json();
 
       setIsLoading(false);
-      const content = data?.choices?.[0].message.content;
-      const citations = data?.citations;
+      const content = JSON.parse(data?.output[0]?.content[0].text);
 
-      const contentWithCitations = processCitationsInContent(
-        content,
-        citations
-      );
+      const title = content.content.title || "Research Paper";
 
-      const responseObject = getResponseObject(contentWithCitations);
+      console.log("data", content);
 
-      console.log("response", responseObject);
-
-      setContent(responseObject?.content || "");
+      setPaperTitle(title);
+      setContent(content.content.content || "");
       setShowDownloadButton(true);
     } catch (error) {
       console.error(error);
@@ -93,22 +141,26 @@ export const MainPage = () => {
     pdfBlob,
     filename,
     query,
+    title,
   }: {
     pdfBlob: Blob;
     filename: string;
     query: string;
+    title: string;
   }) => {
     try {
       await savePdf({
         pdfBlob,
         filename,
         query,
+        title,
       });
     } catch (error) {
       console.error("Error saving PDF to IndexedDB:", error);
     }
   };
   const generatePDF = async () => {
+    // Create a container div and add a custom class so we can define styles for PDF rendering.
     const tempDiv = document.createElement("div");
 
     tempDiv.innerHTML += content;
@@ -168,6 +220,13 @@ export const MainPage = () => {
 
       const imgWidth = 210; // A4 width in mm
       const pageHeight = 297; // A4 height in mm
+
+      // Add a bottom margin of 40px (converted to mm)
+      const topMarginPx = 10;
+      const bottomMarginPx = 40;
+      const topMarginMM = (topMarginPx * 25.4) / 96;
+      const bottomMarginMM = (bottomMarginPx * 25.4) / 96;
+      const effectivePageHeight = pageHeight - (topMarginMM + bottomMarginMM);
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
       let heightLeft = imgHeight;
@@ -175,14 +234,15 @@ export const MainPage = () => {
 
       // Add first page
       pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      heightLeft -= effectivePageHeight;
 
       // Add additional pages if content extends beyond one page
       while (heightLeft > 0) {
         position = heightLeft - imgHeight;
+        // Position slightly upward to account for bottom margin
         pdf.addPage();
         pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+        heightLeft -= effectivePageHeight;
       }
 
       // Add metadata
@@ -194,7 +254,6 @@ export const MainPage = () => {
         creator: "Deep Research",
       });
 
-      // Generate filename with date
       const date = new Date().toISOString().slice(0, 10);
       const filename = `research_${date}.pdf`;
 
@@ -204,6 +263,7 @@ export const MainPage = () => {
         pdfBlob: pdf.output("blob"),
         filename,
         query: currentMessage,
+        title: paperTitle,
       });
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -228,7 +288,7 @@ export const MainPage = () => {
 
   return (
     <Container $hasResponse={!!content}>
-      {content ? (
+      {true ? (
         <ResponsePage
           content={content}
           setContent={setContent}
