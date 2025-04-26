@@ -22,7 +22,7 @@
   },
   "scripts": {
     "start": "craco start",
-    "build": "craco build",
+    "build": "npm run build",
     "test": "craco test"
   },
   "eslintConfig": {
@@ -45,6 +45,7 @@
   },
   "devDependencies": {
     "@craco/craco": "^7.1.0",
-    "@types/jspdf": "^2.0.0"
+    "@types/jspdf": "^2.0.0",
+    "@types/node": "^20.17.31"
   }
 }

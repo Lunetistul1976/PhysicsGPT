@@ -1,5 +1,5 @@
-// Use the current domain for API requests
-const API_URL = '/api';
+// Use the backend API URL for requests
+const API_URL = process.env.REACT_APP_BACKEND_URL || 'https://physics-gpt-backend.vercel.app/api';
 
 // Get the authentication URL from the backend
 export const getAuthUrl = async (): Promise<string> => {
