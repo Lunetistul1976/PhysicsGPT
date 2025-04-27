@@ -294,6 +294,7 @@ export const MainPage = () => {
           setContent={setContent}
           generatePdf={generatePDF}
           showDownloadButton={showDownloadButton}
+          paperTitle={paperTitle}
         />
       ) : (
         <TitleAndExamplesContainer>
