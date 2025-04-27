@@ -12,13 +12,11 @@ export const ResponsePage = ({
   content,
   setContent,
   showDownloadButton,
-  generatePdf,
   paperTitle,
 }: {
   content: string;
   setContent: Dispatch<SetStateAction<string>>;
   showDownloadButton: boolean;
-  generatePdf: () => Promise<void>;
   paperTitle: string;
 }) => {
   const [isGoogleDocsLoading, setIsGoogleDocsLoading] = useState(false);
@@ -140,15 +138,8 @@ export const ResponsePage = ({
     <ChatContainer>
       <RichTextEditor content={content} setContent={setContent} />
       <ButtonContainer>
-        {true && (
+        {showDownloadButton && (
           <>
-            <StyledButton
-              variant="contained"
-              color="primary"
-              onClick={generatePdf}
-            >
-              Download PDF
-            </StyledButton>
             <StyledButton
               variant="contained"
               color="secondary"

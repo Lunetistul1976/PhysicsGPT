@@ -17,8 +17,6 @@ import {
 } from "@carbon/icons-react";
 import { ResponsePage } from "./ResponsePage";
 import { useUserContext } from "../contexts/UserContext";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
 
 import { getPromptMessage } from "../utils/getPromptMessage";
 import { savePdf } from "../utils/indexedDb";
@@ -159,118 +157,6 @@ export const MainPage = () => {
       console.error("Error saving PDF to IndexedDB:", error);
     }
   };
-  const generatePDF = async () => {
-    // Create a container div and add a custom class so we can define styles for PDF rendering.
-    const tempDiv = document.createElement("div");
-
-    tempDiv.innerHTML += content;
-
-    // Style for PDF (always use dark text on light background for readability)
-    tempDiv.style.padding = "20px";
-    tempDiv.style.maxWidth = "800px";
-    tempDiv.style.margin = "0 auto";
-    tempDiv.style.backgroundColor = "white";
-    tempDiv.style.color = "black";
-
-    // Ensure links have proper formatting for PDF conversion
-    const links = tempDiv.querySelectorAll("a");
-    links.forEach((link) => {
-      // Make sure links have proper attributes for PDF conversion
-      link.style.color = "#0000FF";
-      link.style.textDecoration = "none";
-      // Ensure href attribute has quotes
-      const href = link.getAttribute("href");
-      if (href) {
-        link.setAttribute("href", href);
-      }
-    });
-
-    const images = tempDiv.querySelectorAll("img");
-    images.forEach((img) => {
-      if (img.width > 700) {
-        img.style.width = "700px";
-        img.style.height = "auto";
-      }
-    });
-
-    document.body.appendChild(tempDiv);
-    tempDiv.style.position = "absolute";
-    tempDiv.style.left = "-9999px";
-
-    try {
-      tempDiv.style.width = "800px";
-      tempDiv.style.height = "auto";
-      tempDiv.style.overflow = "visible";
-
-      const canvas = await html2canvas(tempDiv, {
-        scale: 2,
-        useCORS: true,
-        logging: true,
-        backgroundColor: "white",
-        allowTaint: true, // Allow images from other domains
-      });
-
-      // Create PDF
-      const imgData = canvas.toDataURL("image/jpeg", 1.0);
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      });
-
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
-
-      // Add a bottom margin of 40px (converted to mm)
-      const topMarginPx = 10;
-      const bottomMarginPx = 40;
-      const topMarginMM = (topMarginPx * 25.4) / 96;
-      const bottomMarginMM = (bottomMarginPx * 25.4) / 96;
-      const effectivePageHeight = pageHeight - (topMarginMM + bottomMarginMM);
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      // Add first page
-      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
-      heightLeft -= effectivePageHeight;
-
-      // Add additional pages if content extends beyond one page
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        // Position slightly upward to account for bottom margin
-        pdf.addPage();
-        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
-        heightLeft -= effectivePageHeight;
-      }
-
-      // Add metadata
-      pdf.setProperties({
-        title: "Research test",
-        subject: "Research",
-        author: "Deep Research",
-        keywords: "research, AI",
-        creator: "Deep Research",
-      });
-
-      const date = new Date().toISOString().slice(0, 10);
-      const filename = `research_${date}.pdf`;
-
-      pdf.save(filename);
-
-      await savePdfInIndexedDb({
-        pdfBlob: pdf.output("blob"),
-        filename,
-        query: currentMessage,
-        title: paperTitle,
-      });
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-    } finally {
-      document.body.removeChild(tempDiv);
-    }
-  };
 
   useEffect(() => {
     if (content) {
@@ -292,7 +178,6 @@ export const MainPage = () => {
         <ResponsePage
           content={content}
           setContent={setContent}
-          generatePdf={generatePDF}
           showDownloadButton={showDownloadButton}
           paperTitle={paperTitle}
         />
