@@ -1,9 +1,0 @@
-{
-  "name": "physics-gpt-api",
-  "version": "1.0.0",
-  "description": "API functions for PhysicsGPT",
-  "main": "index.js",
-  "dependencies": {
-    "node-fetch": "^2.6.7"
-  }
-} 

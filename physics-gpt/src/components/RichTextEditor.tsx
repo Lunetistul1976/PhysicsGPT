@@ -45,6 +45,7 @@ export const RichTextEditor = ({
 
 const StyledQuillContainer = styled("div")(({ theme }) => ({
   width: "100%",
+  height: "100%",
 
   "& .ql-container": {
     backgroundColor: theme.palette.background.paper,

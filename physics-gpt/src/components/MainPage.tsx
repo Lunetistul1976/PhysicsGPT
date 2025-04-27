@@ -49,7 +49,7 @@ export const MainPage = () => {
       model: "gpt-4.1",
       input: getPromptMessage(currentMessage),
       max_output_tokens: 1000000,
-      temperature: 0.2,
+      temperature: 1,
       text: {
         format: {
           type: "json_schema",
@@ -288,7 +288,7 @@ export const MainPage = () => {
 
   return (
     <Container $hasResponse={!!content}>
-      {true ? (
+      {content ? (
         <ResponsePage
           content={content}
           setContent={setContent}
