@@ -3,6 +3,7 @@ import styled from "styled-components";
 import {
   CircularProgress,
   IconButton,
+  Slider, // Import Slider
   TextField,
   Typography,
   useTheme,
@@ -13,13 +14,11 @@ import {
   LogoReact,
   Send,
   WarningAlt,
-  Image,
 } from "@carbon/icons-react";
 import { ResponsePage } from "./ResponsePage";
 import { useUserContext } from "../contexts/UserContext";
 
 import { getPromptMessage } from "../utils/getPromptMessage";
-import { savePdf } from "../utils/indexedDb";
 import { chatGptResponse } from "../utils/constants";
 
 export type ChatResponse = {
@@ -32,22 +31,20 @@ export const MainPage = () => {
   const { setHasModelResponse, hasModelResponse } = useUserContext();
   const [currentMessage, setCurrentMessage] = useState("");
   const [content, setContent] = useState("");
-
+  const [temperature, setTemperature] = useState(0.1);
   const [isLoading, setIsLoading] = useState(false);
-  const [showDownloadButton, setShowDownloadButton] = useState(false);
+  const [lastResponseId, setLastResponseId] = useState<string | null>(null);
   const [paperTitle, setPaperTitle] = useState("");
+  const [previousFullContent, setPreviousFullContent] = useState<
+    string | undefined
+  >(undefined);
 
-  const researchApi = {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.REACT_APP_CHAT_GPT_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+  const generateApiBody = () => {
+    return JSON.stringify({
       model: "gpt-4.1",
-      input: getPromptMessage(currentMessage),
-      max_output_tokens: 1000000,
-      temperature: 1,
+      input: getPromptMessage(currentMessage, previousFullContent),
+      previous_response_id: lastResponseId,
+      temperature: temperature,
       text: {
         format: {
           type: "json_schema",
@@ -76,7 +73,7 @@ export const MainPage = () => {
                   additionalProperties: false,
                 },
                 description:
-                  "A list of citations or references used in the research paper.",
+                  "A list of citations or references used in the research paper (biography section).",
               },
               assets: {
                 type: "array",
@@ -92,13 +89,8 @@ export const MainPage = () => {
                 description:
                   "A list of assets or images related to the research paper.",
               },
-              pdf: {
-                type: "string",
-                description: "The PDF file of the research paper.",
-                additionalProperties: false,
-              },
             },
-            required: ["content", "citations", "assets", "pdf"],
+            required: ["content", "citations", "assets"],
             additionalProperties: false,
           },
         },
@@ -110,51 +102,43 @@ export const MainPage = () => {
         },
       ],
       stream: false,
-    }),
+    });
   };
 
   const getChatResponse = async () => {
     setIsLoading(true);
     try {
+      const researchApi = {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.REACT_APP_CHAT_GPT_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: generateApiBody(),
+      };
+
       const response = await fetch(chatGptResponse, researchApi);
       const data = await response.json();
 
       setIsLoading(false);
-      const content = JSON.parse(data?.output[0]?.content[0].text);
 
-      const title = content.content.title || "Research Paper";
+      const parsedContent = JSON.parse(data?.output?.[0]?.content[0].text);
+      const mainTextContent = parsedContent.content.content || "";
+      const title = parsedContent.content.title || "Research Paper";
 
-      console.log("data", content);
+      setPreviousFullContent(mainTextContent);
+
+      setLastResponseId(data.id?.toString() || null);
 
       setPaperTitle(title);
-      setContent(content.content.content || "");
-      setShowDownloadButton(true);
+      setContent(mainTextContent);
     } catch (error) {
       console.error(error);
+      // --- Modification Start ---
+      // Clear previous content on error? Or keep it? Decide based on desired UX.
+      // setPreviousFullContent(undefined);
+      // --- Modification End ---
       setIsLoading(false);
-    }
-  };
-
-  const savePdfInIndexedDb = async ({
-    pdfBlob,
-    filename,
-    query,
-    title,
-  }: {
-    pdfBlob: Blob;
-    filename: string;
-    query: string;
-    title: string;
-  }) => {
-    try {
-      await savePdf({
-        pdfBlob,
-        filename,
-        query,
-        title,
-      });
-    } catch (error) {
-      console.error("Error saving PDF to IndexedDB:", error);
     }
   };
 
@@ -168,18 +152,27 @@ export const MainPage = () => {
     if (!hasModelResponse) {
       setCurrentMessage("");
       setContent("");
-      setShowDownloadButton(false);
+      setPreviousFullContent(undefined); // Also clear previous content state
+      setLastResponseId(null); // Reset Cohere ID
     }
   }, [hasModelResponse]);
+
+  // Reset previous content when the main content is cleared (e.g., new session)
+  useEffect(() => {
+    if (!content) {
+      setPreviousFullContent(undefined);
+    }
+  }, [content]);
+
+  console.log("content", content);
 
   return (
     <Container $hasResponse={!!content}>
       {content ? (
         <ResponsePage
           content={content}
-          setContent={setContent}
-          showDownloadButton={showDownloadButton}
           paperTitle={paperTitle}
+          isLoading={isLoading}
         />
       ) : (
         <TitleAndExamplesContainer>
@@ -280,43 +273,64 @@ export const MainPage = () => {
         </TitleAndExamplesContainer>
       )}
 
-      {!showDownloadButton && (
-        <InputContainer>
-          <StyledTextField
-            fullWidth
-            autoComplete="off"
-            onChange={(event) => setCurrentMessage(event.target.value)}
-            placeholder="Ask a question about physics..."
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                getChatResponse();
-              }
-            }}
-            value={currentMessage}
-            color="secondary"
-            $bgColor={theme.palette.primary.light}
-            slotProps={{
-              input: {
-                endAdornment: isLoading ? (
-                  <CircularProgress size={20} />
-                ) : (
-                  <IconButton
-                    onClick={getChatResponse}
-                    disabled={!currentMessage}
+      <InputContainer>
+        <StyledTextField
+          fullWidth
+          autoComplete="off"
+          onChange={(event) => setCurrentMessage(event.target.value)}
+          placeholder="Ask a question..."
+          disabled={isLoading}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              getChatResponse();
+            }
+          }}
+          value={currentMessage}
+          color="secondary"
+          $bgColor={theme.palette.primary.light}
+          slotProps={{
+            input: {
+              endAdornment: (
+                <ButtonContainer>
+                  {isLoading ? (
+                    <CircularProgress size={20} />
+                  ) : (
+                    <IconButton
+                      onClick={getChatResponse}
+                      disabled={!currentMessage}
+                    >
+                      <Send size={20} />
+                    </IconButton>
+                  )}
+                </ButtonContainer>
+              ),
+              startAdornment: (
+                <SliderContainer>
+                  <Typography
+                    variant="caption"
+                    sx={{ mr: 1 }}
+                    whiteSpace={"nowrap"}
                   >
-                    <Send size={20} />
-                  </IconButton>
-                ),
-                startAdornment: (
-                  <IconButton disabled>
-                    <Image size={20} />
-                  </IconButton>
-                ),
-              },
-            }}
-          />
-        </InputContainer>
-      )}
+                    Weight: {temperature.toFixed(1)}
+                  </Typography>
+                  <Slider
+                    aria-label="Temperature"
+                    value={temperature}
+                    onChange={(event, newValue) =>
+                      setTemperature(newValue as number)
+                    }
+                    step={0.1}
+                    min={0.1}
+                    max={1.0}
+                    size="small"
+                    sx={{ width: 50, mr: 1 }}
+                  />
+                </SliderContainer>
+              ),
+            },
+          }}
+        />
+      </InputContainer>
     </Container>
   );
 };
@@ -324,7 +338,7 @@ const Container = styled.div<{ $hasResponse: boolean }>`
   align-items: center;
   display: flex;
   flex-direction: column;
-  gap: ${({ $hasResponse }) => ($hasResponse ? "120px" : "232px")};
+  gap: ${({ $hasResponse }) => ($hasResponse ? "32px" : "232px")};
   padding: 32px;
   height: 100%;
   justify-content: center;
@@ -377,6 +391,16 @@ const InputContainer = styled.div`
   display: flex;
   justify-content: center;
   width: 100%;
+`;
+
+const SliderContainer = styled.div`
+  display: flex;
+  align-items: center;
+  padding-left: 12px;
+`;
+
+const ButtonContainer = styled.div`
+  padding-left: 12px;
 `;
 
 const StyledTextField = styled(TextField)<{ $bgColor: string }>`

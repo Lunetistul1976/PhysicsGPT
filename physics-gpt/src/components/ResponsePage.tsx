@@ -1,7 +1,13 @@
-import React, { Dispatch, SetStateAction, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { styled } from "styled-components";
-import { RichTextEditor } from "./RichTextEditor";
-import { Button, CircularProgress, Snackbar, Alert } from "@mui/material";
+// Removed RichTextEditor import
+import {
+  Button,
+  CircularProgress,
+  Snackbar,
+  Alert,
+  Skeleton,
+} from "@mui/material";
 import {
   createAndUpdateGoogleDoc,
   initGoogleDocsApi,
@@ -10,14 +16,12 @@ import {
 
 export const ResponsePage = ({
   content,
-  setContent,
-  showDownloadButton,
   paperTitle,
+  isLoading,
 }: {
   content: string;
-  setContent: Dispatch<SetStateAction<string>>;
-  showDownloadButton: boolean;
   paperTitle: string;
+  isLoading: boolean;
 }) => {
   const [isGoogleDocsLoading, setIsGoogleDocsLoading] = useState(false);
   const [googleDocsApiInitialized, setGoogleDocsApiInitialized] =
@@ -32,7 +36,14 @@ export const ResponsePage = ({
     severity: "info",
   });
 
-  // Initialize the Google Docs API when the component mounts
+  const processContent = (text: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+    return text.replace(urlRegex, (match, url) => {
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+    });
+  };
+
   useEffect(() => {
     const initializeApi = async () => {
       try {
@@ -75,7 +86,6 @@ export const ResponsePage = ({
         severity: "info",
       });
 
-      // Try to use the Google Docs API if it's initialized
       if (googleDocsApiInitialized) {
         try {
           setNotification({
@@ -93,7 +103,6 @@ export const ResponsePage = ({
               severity: "success",
             });
 
-            // Open the document in a new tab
             openGoogleDoc(docUrl);
           } else {
             throw new Error("Failed to create Google Doc");
@@ -136,24 +145,34 @@ export const ResponsePage = ({
 
   return (
     <ChatContainer>
-      <RichTextEditor content={content} setContent={setContent} />
+      {isLoading ? (
+        <Skeleton
+          variant="rectangular"
+          width={800}
+          height={600}
+          animation="wave"
+        />
+      ) : (
+        <ResponseContainer>
+          <pre dangerouslySetInnerHTML={{ __html: processContent(content) }} />
+        </ResponseContainer>
+      )}
+
       <ButtonContainer>
-        {showDownloadButton && (
-          <>
-            <StyledButton
-              variant="contained"
-              color="secondary"
-              onClick={handleOpenInGoogleDocs}
-              disabled={isGoogleDocsLoading}
-            >
-              {isGoogleDocsLoading ? (
-                <CircularProgress size={24} color="inherit" />
-              ) : (
-                "Open in Google Docs"
-              )}
-            </StyledButton>
-          </>
-        )}
+        <>
+          <StyledButton
+            variant="contained"
+            color="secondary"
+            onClick={handleOpenInGoogleDocs}
+            disabled={isGoogleDocsLoading}
+          >
+            {isGoogleDocsLoading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              "Open in Google Docs"
+            )}
+          </StyledButton>
+        </>
       </ButtonContainer>
 
       <Snackbar
@@ -180,7 +199,40 @@ const ChatContainer = styled.div`
   gap: 32px;
   flex-direction: column;
   width: 100%;
-  height: 100%;
+`;
+
+const ResponseContainer = styled.div`
+  background-color: ${(props) => props.theme.palette?.background?.paper};
+  border: 1px solid ${(props) => props.theme.palette?.divider};
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 600px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  color: ${(props) => props.theme.palette?.text?.primary};
+  font-family: Arial, sans-serif;
+  font-size: 11pt;
+  line-height: 1.5;
+  overflow-y: auto;
+  flex-grow: 1;
+  margin-bottom: 16px;
+
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: inherit;
+    font-size: inherit;
+    margin: 0;
+
+    a {
+      color: ${(props) => props.theme.palette?.primary?.main};
+      text-decoration: none;
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
 `;
 
 const ButtonContainer = styled.div`

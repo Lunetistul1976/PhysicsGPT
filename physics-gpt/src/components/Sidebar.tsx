@@ -2,7 +2,6 @@ import { Add, Awake, Moon, Pdf } from "@carbon/icons-react";
 import {
   Button,
   Divider,
-  Theme,
   Typography,
   useTheme,
   List,
@@ -10,11 +9,10 @@ import {
   ListItemText,
   ListItemIcon,
 } from "@mui/material";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { styled } from "styled-components";
 import { useThemeContext } from "../contexts/ThemeContext";
 import { useUserContext } from "../contexts/UserContext";
-import { getAllPdfs } from "../utils/indexedDb";
 
 interface StoredPdf {
   id: number;
@@ -29,26 +27,8 @@ export const Sidebar = () => {
   const theme = useTheme();
   const { toggleTheme, isDarkMode } = useThemeContext();
   const { hasModelResponse, setHasModelResponse } = useUserContext();
-  const [savedPdfs, setSavedPdfs] = useState<StoredPdf[]>([]);
 
-  useEffect(() => {
-    fetchSavedPdfs();
-  }, [hasModelResponse]);
-
-  const fetchSavedPdfs = async () => {
-    try {
-      const pdfs = await getAllPdfs();
-      setSavedPdfs(
-        pdfs.map((pdf) => ({
-          ...pdf,
-          date: new Date(pdf.date),
-        }))
-      );
-    } catch (error) {
-      console.error("Error fetching PDFs from IndexedDB:", error);
-      setSavedPdfs([]);
-    }
-  };
+  useEffect(() => {}, [hasModelResponse]);
 
   const openPdf = (pdf: StoredPdf) => {
     const url = URL.createObjectURL(pdf.pdfData);
@@ -75,9 +55,9 @@ export const Sidebar = () => {
           Previous Results
         </Typography>
 
-        {savedPdfs.length > 0 ? (
+        {[].length > 0 ? (
           <List sx={{ width: "100%", padding: 0 }}>
-            {savedPdfs.map((pdf) => (
+            {[].map((pdf) => (
               <ListItem
                 key={pdf.id}
                 onClick={() => openPdf(pdf)}
@@ -135,7 +115,7 @@ export const Sidebar = () => {
   );
 };
 
-const Container = styled.div<{ theme: Theme }>`
+const Container = styled.div`
   align-items: center;
   border-right: 1px solid ${(props) => props.theme.palette.divider};
   display: flex;
