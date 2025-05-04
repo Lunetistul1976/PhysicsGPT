@@ -13,6 +13,7 @@ import {
   initGoogleDocsApi,
   openGoogleDoc,
 } from "../utils/googleDocsApi";
+import { addOrUpdateHistory } from "../utils/indexedDbUtils"; // Import DB utility
 
 export const ResponsePage = ({
   content,
@@ -103,7 +104,43 @@ export const ResponsePage = ({
               severity: "success",
             });
 
-            openGoogleDoc(docUrl);
+            // --- Modification Start: Extract ID and save to IndexedDB ---
+            const docIdMatch = docUrl.match(/document\/d\/([a-zA-Z0-9_-]+)\//);
+            const docId = docIdMatch ? docIdMatch[1] : null;
+
+            if (docId && paperTitle) {
+              try {
+                await addOrUpdateHistory({
+                  title: paperTitle, // Use title as the key
+                  docId: docId,
+                  timestamp: Date.now(),
+                });
+                setNotification((prev) => ({
+                  ...prev,
+                  message: "Google Doc created & saved to history! Opening...",
+                }));
+              } catch (dbError) {
+                console.error("Failed to save history to IndexedDB:", dbError);
+                // Optionally update notification to indicate save failure but still open doc
+                setNotification((prev) => ({
+                  ...prev,
+                  message: "Doc created (history save failed). Opening...",
+                  severity: "warning",
+                }));
+              }
+            } else {
+              console.warn(
+                "Could not extract Doc ID or missing title, history not saved."
+              );
+              setNotification((prev) => ({
+                ...prev,
+                message: "Doc created (ID extract failed). Opening...",
+                severity: "warning",
+              }));
+            }
+            // --- Modification End ---
+
+            openGoogleDoc(docUrl); // Open the doc regardless of save status
           } else {
             throw new Error("Failed to create Google Doc");
           }

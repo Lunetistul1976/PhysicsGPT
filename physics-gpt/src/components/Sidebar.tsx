@@ -1,116 +1,111 @@
-import { Add, Awake, Moon, Pdf } from "@carbon/icons-react";
+import React, { useState, useEffect } from "react";
+import styled from "styled-components";
 import {
   Button,
   Divider,
   Typography,
-  useTheme,
+  CircularProgress,
   List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
+  Box,
+  useTheme,
+  MenuItem,
 } from "@mui/material";
-import React, { useEffect } from "react";
-import { styled } from "styled-components";
+import { Add, Awake, Moon } from "@carbon/icons-react";
 import { useThemeContext } from "../contexts/ThemeContext";
 import { useUserContext } from "../contexts/UserContext";
-
-interface StoredPdf {
-  id: number;
-  filename: string;
-  date: Date;
-  query: string;
-  pdfData: Blob;
-  title: string;
-}
+import { getAllHistory, HistoryRecord } from "../utils/indexedDbUtils";
+import { openGoogleDoc } from "../utils/googleDocsApi";
 
 export const Sidebar = () => {
   const theme = useTheme();
   const { toggleTheme, isDarkMode } = useThemeContext();
   const { hasModelResponse, setHasModelResponse } = useUserContext();
+  const [history, setHistory] = useState<HistoryRecord[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [errorHistory, setErrorHistory] = useState<string | null>(null);
 
-  useEffect(() => {}, [hasModelResponse]);
+  useEffect(() => {
+    const fetchHistory = async () => {
+      setIsLoadingHistory(true);
+      setErrorHistory(null);
+      try {
+        const records = await getAllHistory();
+        setHistory(records);
+      } catch (error) {
+        console.error("Failed to fetch history:", error);
+        setErrorHistory("Could not load history.");
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
 
-  const openPdf = (pdf: StoredPdf) => {
-    const url = URL.createObjectURL(pdf.pdfData);
-    window.open(url, "_blank");
+    fetchHistory();
+  }, [hasModelResponse]);
+
+  const handleNewChat = () => {
+    setHasModelResponse(false);
+  };
+
+  const handleHistoryItemClick = (docId: string) => {
+    console.log("Opening Google Doc with ID:", docId);
+    const docUrl = `https://docs.google.com/document/d/${docId}/edit`;
+    openGoogleDoc(docUrl);
   };
 
   return (
     <Container theme={theme}>
-      <ResultsContainer>
-        <Button
-          size="medium"
-          variant="contained"
-          color="secondary"
-          startIcon={<Add size={26} />}
-          fullWidth
-          disabled={!hasModelResponse}
-          onClick={() => {
-            setHasModelResponse(false);
-          }}
-        >
-          New chat
-        </Button>
-        <Typography variant="subtitle2" color="textSecondary">
-          Previous Results
-        </Typography>
-
-        {[].length > 0 ? (
-          <List sx={{ width: "100%", padding: 0 }}>
-            {[].map((pdf) => (
-              <ListItem
-                key={pdf.id}
-                onClick={() => openPdf(pdf)}
-                sx={{
-                  cursor: "pointer",
-                  borderRadius: "8px",
-                  "&:hover": {
-                    backgroundColor: theme.palette.action.hover,
-                  },
-                }}
-                title={pdf.title}
-              >
-                <ListItemIcon sx={{ minWidth: "36px" }}>
-                  <Pdf size={20} />
-                </ListItemIcon>
-                <ListItemText
-                  primary={
-                    <Typography noWrap variant="body2">
-                      {pdf.title}
-                    </Typography>
-                  }
-                  secondary={
-                    <Typography variant="caption" color="textSecondary">
-                      {new Date(pdf.date).toLocaleDateString()}
-                    </Typography>
-                  }
-                />
-              </ListItem>
-            ))}
-          </List>
-        ) : (
-          <Typography
-            variant="body2"
-            color="textSecondary"
-            sx={{ fontStyle: "italic" }}
-          >
-            No saved research yet
+      <Button
+        size="medium"
+        variant="contained"
+        color="secondary"
+        startIcon={<Add size={26} />}
+        fullWidth
+        disabled={!hasModelResponse}
+        onClick={handleNewChat}
+      >
+        New chat
+      </Button>
+      <Divider sx={{ my: 1 }} />
+      <Typography variant="overline">History</Typography>
+      <HistoryList>
+        {isLoadingHistory ? (
+          <Box sx={{ display: "flex", justifyContent: "center", p: 2 }}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : errorHistory ? (
+          <Typography color="error" sx={{ p: 2 }}>
+            {errorHistory}
           </Typography>
+        ) : history.length === 0 ? (
+          <Typography
+            sx={{ p: 2, textAlign: "center", color: "text.secondary" }}
+          >
+            No history yet.
+          </Typography>
+        ) : (
+          history.map((item) => (
+            <StyledMenuItem
+              onClick={() => handleHistoryItemClick(item.docId)}
+              title={item.title}
+              key={item.docId}
+            >
+              <Typography variant="body2" noWrap>
+                {item.title}
+              </Typography>
+            </StyledMenuItem>
+          ))
         )}
-      </ResultsContainer>
-
-      <AdditionalButtonsContainer>
-        <Divider />
-        <Button
-          size="medium"
-          color="secondary"
-          variant="contained"
-          startIcon={isDarkMode ? <Awake /> : <Moon />}
-          onClick={toggleTheme}
-        >
-          {isDarkMode ? "Light Mode" : "Dark Mode"}
-        </Button>
-      </AdditionalButtonsContainer>
+      </HistoryList>
+      <Divider />
+      <Button
+        size="medium"
+        color="secondary"
+        variant="contained"
+        startIcon={isDarkMode ? <Awake /> : <Moon />}
+        onClick={toggleTheme}
+      >
+        {isDarkMode ? "Light Mode" : "Dark Mode"}
+      </Button>
     </Container>
   );
 };
@@ -127,19 +122,15 @@ const Container = styled.div`
   width: 100%;
 `;
 
-const ResultsContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  flex: 5;
+const HistoryList = styled(List)`
+  flex-grow: 1;
   overflow-y: auto;
-  gap: 16px;
-  width: 100%;
 `;
 
-const AdditionalButtonsContainer = styled.div`
+const StyledMenuItem = styled(MenuItem)`
+  align-items: center;
   display: flex;
-  gap: 16px;
-  flex-direction: column;
-  flex: 1;
+  max-width: 282px;
+  gap: 8px;
   width: 100%;
 `;
