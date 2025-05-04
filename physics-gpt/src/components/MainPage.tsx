@@ -164,8 +164,6 @@ export const MainPage = () => {
     }
   }, [content]);
 
-  console.log("content", content);
-
   return (
     <Container $hasResponse={!!content}>
       {content ? (

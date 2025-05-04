@@ -40,7 +40,6 @@ const initializeGapiClient = async (): Promise<void> => {
     discoveryDocs: ["https://docs.googleapis.com/$discovery/rest?version=v1"],
   });
   isGapiClientInitialized = true;
-  console.log("gapi.client initialized for Docs API.");
 };
 
 // Initialize the Google Identity Services Token Client
@@ -54,7 +53,7 @@ const initializeGisTokenClient = (): void => {
       if (tokenResponse && tokenResponse.access_token) {
         currentAccessToken = tokenResponse.access_token;
         window.gapi.client.setToken({ access_token: currentAccessToken }); // Set token for gapi
-        console.log("Access token obtained and set for gapi.client.");
+
         // Potentially trigger actions that were waiting for auth
       } else {
         currentAccessToken = null;
@@ -72,7 +71,6 @@ const initializeGisTokenClient = (): void => {
     },
   });
   gisTokenClientInitialized = true;
-  console.log("GIS Token Client initialized.");
 };
 
 // Main initialization function called from App.tsx
@@ -98,7 +96,6 @@ export const initGoogleDocsApi = async (): Promise<boolean> => {
       throw new Error("Google Identity Services (GIS) failed to load.");
     }
 
-    console.log("Google Docs API integration fully initialized.");
     return true;
   } catch (error) {
     console.error("Error initializing Google Docs API integration:", error);
@@ -114,7 +111,6 @@ export const initGoogleDocsApi = async (): Promise<boolean> => {
 export const authenticateUser = async (): Promise<boolean> => {
   // Ensure everything is initialized
   if (!isGapiClientInitialized || !gisTokenClientInitialized) {
-    console.log("API not fully initialized. Attempting initialization...");
     const initialized = await initGoogleDocsApi();
     if (!initialized) {
       console.error("Initialization failed during authentication attempt.");
@@ -126,7 +122,6 @@ export const authenticateUser = async (): Promise<boolean> => {
 
   // Check if we already have a valid token (basic check)
   if (currentAccessToken) {
-    console.log("User already has an access token.");
     // You might add token expiration checks here in a real app
     return true;
   }
@@ -138,7 +133,6 @@ export const authenticateUser = async (): Promise<boolean> => {
     let originalErrorCallback: any;
 
     try {
-      console.log("Requesting access token via GIS...");
       // Define a temporary callback to resolve this promise once the token is received (or fails)
       originalCallback = window.tokenClient.callback;
       originalErrorCallback = window.tokenClient.error_callback;
@@ -179,7 +173,6 @@ export const authenticateUser = async (): Promise<boolean> => {
 // Helper function to ensure authentication before API calls
 const ensureAuthenticated = async (): Promise<boolean> => {
   if (!currentAccessToken) {
-    console.log("Not authenticated, attempting to authenticate...");
     return await authenticateUser();
   }
   // Add token expiry check here if necessary
@@ -204,7 +197,6 @@ export const createGoogleDoc = async (
   }
 
   try {
-    console.log("Creating Google Doc via API...");
     // Create a new document
     const response = await window.gapi.client.docs.documents.create({
       // The request body goes directly here for gapi.client
@@ -212,7 +204,7 @@ export const createGoogleDoc = async (
     });
 
     const documentId = response.result.documentId;
-    console.log("Created Google Doc with ID:", documentId);
+
     return documentId;
   } catch (error: any) {
     console.error("Error creating Google Doc:", error);
@@ -236,9 +228,9 @@ export const createGoogleDoc = async (
 // Update a Google Doc with content using batchUpdate
 export const updateGoogleDoc = async (
   documentId: string,
-  content: string // Assuming plain text for simplicity now
+  content: string
 ): Promise<boolean> => {
-  const authenticated = await ensureAuthenticated();
+  const authenticated = await ensureAuthenticated(); // Ensure authentication first
   if (!authenticated) {
     console.error("Authentication required to update document.");
     alert("Authentication failed. Cannot update Google Doc.");
@@ -252,28 +244,80 @@ export const updateGoogleDoc = async (
   }
 
   try {
-    console.log(`Updating Google Doc (ID: ${documentId}) via batchUpdate...`);
-    // Basic request to insert text at the beginning
-    const requests = [
-      {
-        insertText: {
-          location: {
-            index: 1, // Start of the document body
+    // --- Modification Start: Parse content and build requests ---
+    const requests: any[] = [];
+    const urlRegex = /(https?:\/\/[^\s]+)/g; // Regex to find URLs
+    let lastIndex = 0;
+    let currentIndex = 1; // Start index in Google Docs body is 1
+
+    let match;
+    while ((match = urlRegex.exec(content)) !== null) {
+      const url = match[0];
+      const urlStartIndex = match.index;
+      const textBefore = content.substring(lastIndex, urlStartIndex);
+
+      // 1. Insert text before the URL
+      if (textBefore.length > 0) {
+        requests.push({
+          insertText: {
+            location: { index: currentIndex },
+            text: textBefore,
           },
-          text: content,
+        });
+        currentIndex += textBefore.length;
+      }
+
+      // 2. Insert the URL text
+      const urlLength = url.length;
+      requests.push({
+        insertText: {
+          location: { index: currentIndex },
+          text: url,
         },
-      },
-      // Add more requests here for formatting if needed
-    ];
+      });
 
-    // Update the document
-    await window.gapi.client.docs.documents.batchUpdate({
-      documentId: documentId,
-      // The request body goes directly here for gapi.client
-      requests: requests,
-    });
+      // 3. Apply link style to the inserted URL text
+      requests.push({
+        updateTextStyle: {
+          range: {
+            startIndex: currentIndex,
+            endIndex: currentIndex + urlLength,
+          },
+          textStyle: {
+            link: {
+              url: url, // Set the URL for the link
+            },
+          },
+          fields: "link", // Specify that we are updating the link property
+        },
+      });
 
-    console.log("Updated Google Doc with content successfully.");
+      currentIndex += urlLength;
+      lastIndex = urlStartIndex + urlLength;
+    }
+
+    // 4. Insert any remaining text after the last URL
+    const textAfter = content.substring(lastIndex);
+    if (textAfter.length > 0) {
+      requests.push({
+        insertText: {
+          location: { index: currentIndex },
+          text: textAfter,
+        },
+      });
+    }
+
+    // Update the document if there are requests to process
+    if (requests.length > 0) {
+      await window.gapi.client.docs.documents.batchUpdate({
+        documentId: documentId,
+        requests: requests,
+      });
+      console.log("Google Doc updated with links.");
+    } else {
+      console.log("No content changes needed for Google Doc.");
+    }
+
     return true;
   } catch (error: any) {
     console.error("Error updating Google Doc:", error);
@@ -281,73 +325,37 @@ export const updateGoogleDoc = async (
       console.warn("Authentication error during update. Clearing token.");
       currentAccessToken = null;
       window.gapi.client.setToken(null);
-      alert("Authentication error. Please try authenticating again.");
-    } else {
       alert(
-        `Error updating Google Doc: ${
-          error.result?.error?.message || error.message || "Unknown error"
-        }`
+        "Authentication expired or failed. Please try opening the doc again to re-authenticate."
       );
+    } else {
+      alert(`Error updating Google Doc: ${error.message || "Unknown error"}`);
     }
     return false;
-  }
-};
-
-// --- Combined Operation & Opening ---
-
-// Helper function to strip HTML tags (remains the same)
-const stripHtmlTags = (html: string): string => {
-  try {
-    const tmp = document.createElement("DIV");
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || "";
-  } catch (e) {
-    console.error("Error stripping HTML:", e);
-    return html; // Fallback to original if parsing fails
   }
 };
 
 // Create a Google Doc, update it with content, and return the URL
 export const createAndUpdateGoogleDoc = async (
   title: string,
-  htmlContent: string // Accept HTML content
+  content: string
 ): Promise<string | null> => {
-  // Authentication is handled within createGoogleDoc and updateGoogleDoc
-
-  // Create the document
   const documentId = await createGoogleDoc(title);
   if (!documentId) {
-    console.error("Failed to create the document initially.");
-    return null; // Error already alerted in createGoogleDoc
+    return null;
   }
 
-  // Convert HTML to plain text for insertion
-  // TODO: Implement proper HTML to Google Docs format conversion for rich text
-  const plainTextContent = stripHtmlTags(htmlContent);
+  // Update the newly created document with content and links
+  const updated = await updateGoogleDoc(documentId, content);
 
-  if (!plainTextContent) {
-    console.warn(
-      "No text content found after stripping HTML. Document created but not updated."
-    );
-    // Return the URL even if content is empty, as the doc exists
-    return `https://docs.google.com/document/d/${documentId}/edit`;
-  }
-
-  // Wait a moment for the document to be fully ready on Google's side (optional but sometimes helpful)
-  // await new Promise((resolve) => setTimeout(resolve, 1500));
-
-  // Update the document with content
-  const updated = await updateGoogleDoc(documentId, plainTextContent);
   if (!updated) {
-    console.error("Failed to update the document with content.");
-    // Document was created, but update failed. Still return URL? Or null?
-    // Let's return the URL so the user can access the empty doc.
-    // Error was already alerted in updateGoogleDoc.
-    return `https://docs.google.com/document/d/${documentId}/edit`;
+    // Handle update failure - maybe delete the created doc or notify user
+    console.error(`Failed to update document ${documentId} after creation.`);
+    // Optionally try to delete the empty doc here
+    return null; // Indicate failure
   }
 
-  console.log("Document created and updated successfully.");
-  // Return the document URL
+  // Return the URL to the updated document
   return `https://docs.google.com/document/d/${documentId}/edit`;
 };
 
