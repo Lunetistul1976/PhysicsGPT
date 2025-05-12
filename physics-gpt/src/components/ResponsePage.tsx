@@ -183,7 +183,7 @@ export const ResponsePage = ({
   return (
     <ChatContainer>
       {isLoading ? (
-        <Skeleton
+        <StyledSkeleton
           variant="rectangular"
           width={800}
           height={600}
@@ -280,4 +280,8 @@ const ButtonContainer = styled.div`
 
 const StyledButton = styled(Button)`
   min-width: 150px;
+`;
+
+const StyledSkeleton = styled(Skeleton)`
+  border-radius: 8px;
 `;
