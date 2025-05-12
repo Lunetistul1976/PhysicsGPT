@@ -3,7 +3,7 @@ import styled from "styled-components";
 import {
   CircularProgress,
   IconButton,
-  Slider, // Import Slider
+  InputAdornment,
   TextField,
   Typography,
   useTheme,
@@ -12,6 +12,7 @@ import {
   Chat,
   DataEnrichment,
   LogoReact,
+  QBarrier,
   Send,
   WarningAlt,
 } from "@carbon/icons-react";
@@ -20,6 +21,7 @@ import { useUserContext } from "../contexts/UserContext";
 
 import { getPromptMessage } from "../utils/getPromptMessage";
 import { chatGptResponse } from "../utils/constants";
+import { InputMenu } from "./InputMenu";
 
 export type ChatResponse = {
   question: string;
@@ -38,6 +40,8 @@ export const MainPage = () => {
   const [previousFullContent, setPreviousFullContent] = useState<
     string | undefined
   >(undefined);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const anchorRef = React.useRef<HTMLButtonElement>(null);
 
   const generateApiBody = () => {
     return JSON.stringify({
@@ -100,6 +104,10 @@ export const MainPage = () => {
           type: "web_search_preview",
           search_context_size: "high",
         },
+        {
+          type: "file_search",
+          vector_store_ids: ["vs_68226b6e61a481918f5a4733b5a17982"],
+        },
       ],
       stream: false,
     });
@@ -152,12 +160,11 @@ export const MainPage = () => {
     if (!hasModelResponse) {
       setCurrentMessage("");
       setContent("");
-      setPreviousFullContent(undefined); // Also clear previous content state
-      setLastResponseId(null); // Reset Cohere ID
+      setPreviousFullContent(undefined);
+      setLastResponseId(null);
     }
   }, [hasModelResponse]);
 
-  // Reset previous content when the main content is cleared (e.g., new session)
   useEffect(() => {
     if (!content) {
       setPreviousFullContent(undefined);
@@ -303,32 +310,26 @@ export const MainPage = () => {
                 </ButtonContainer>
               ),
               startAdornment: (
-                <SliderContainer>
-                  <Typography
-                    variant="caption"
-                    sx={{ mr: 1 }}
-                    whiteSpace={"nowrap"}
+                <InputAdornment position="start">
+                  <IconButton
+                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                    ref={anchorRef}
                   >
-                    Weight: {temperature.toFixed(1)}
-                  </Typography>
-                  <Slider
-                    aria-label="Temperature"
-                    value={temperature}
-                    onChange={(event, newValue) =>
-                      setTemperature(newValue as number)
-                    }
-                    step={0.1}
-                    min={0.1}
-                    max={1.0}
-                    size="small"
-                    sx={{ width: 50, mr: 1 }}
-                  />
-                </SliderContainer>
+                    <QBarrier />
+                  </IconButton>
+                </InputAdornment>
               ),
             },
           }}
         />
       </InputContainer>
+      <InputMenu
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+        temperature={temperature}
+        setTemperature={setTemperature}
+        anchorEl={anchorRef.current}
+      />
     </Container>
   );
 };
@@ -336,20 +337,30 @@ const Container = styled.div<{ $hasResponse: boolean }>`
   align-items: center;
   display: flex;
   flex-direction: column;
-  gap: ${({ $hasResponse }) => ($hasResponse ? "32px" : "232px")};
+  gap: 32px;
   padding: 32px;
   height: 100%;
-  justify-content: center;
+  justify-content: normal;
   width: 100%;
+
+  @media (min-width: 1230px) {
+    justify-content: center;
+    gap: ${({ $hasResponse }) => ($hasResponse ? "32px" : "232px")};
+  }
 `;
 
 const TitleAndExamplesContainer = styled.div`
   align-items: center;
   display: flex;
   flex-direction: column;
-  gap: 80px;
+  gap: 24px;
   max-width: 920px;
   width: 100%;
+  overflow-y: auto;
+
+  @media (min-width: 1230px) {
+    gap: 80px;
+  }
 `;
 
 const TitleAndLogoContainer = styled.div`
@@ -360,7 +371,13 @@ const TitleAndLogoContainer = styled.div`
 
 const ExamplesAndCapabilitiesContainer = styled.div`
   display: flex;
-  gap: 40px;
+  flex-direction: column;
+  gap: 16px;
+
+  @media (min-width: 1230px) {
+    flex-direction: row;
+    gap: 40px;
+  }
 `;
 
 const Section = styled.div`
@@ -389,12 +406,6 @@ const InputContainer = styled.div`
   display: flex;
   justify-content: center;
   width: 100%;
-`;
-
-const SliderContainer = styled.div`
-  display: flex;
-  align-items: center;
-  padding-left: 12px;
 `;
 
 const ButtonContainer = styled.div`
