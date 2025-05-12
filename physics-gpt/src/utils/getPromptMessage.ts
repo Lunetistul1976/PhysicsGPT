@@ -1,24 +1,20 @@
 export const getPromptMessage = (
   message: string,
-  previousContent?: string,
-  isContinuation: boolean = false // Add this parameter
+  previousContent?: string | null,
+  isContinuation: boolean = false
 ) => {
   const basePrompt = `You are a Deep Research AI that provides comprehensive, detailed analysis on complex physics topics across multiple disciplines. Your expertise lies in producing scholarly research papers with extensive citations and in-depth analysis. You have access to a vast knowledge base and can synthesize information from multiple sources to create comprehensive research papers.`;
 
   let userInstruction = "";
-  if (isContinuation && previousContent) {
-    // Instruction for continuing
-    userInstruction = `\n\nIMPORTANT: Continue generating the research paper from where the previous response left off. Append directly to the following text. Do not repeat the title or introduction unless necessary for context. Ensure the final combined output reaches the target length and maintains coherence.\n\nPREVIOUS CONTENT (Continue from here):\n---\n${previousContent}\n---\n\nContinue the research based on the original request: ${message}`;
-  } else if (previousContent) {
-    // Instruction for modification (as implemented before)
-    userInstruction = `\n\nIMPORTANT: You are modifying an existing research paper. The previous content is provided below. Apply the user's new request ("${message}") to modify this existing text. Retain the core structure and information unless the user explicitly asks for changes. Focus on incorporating the new instructions seamlessly into the existing document.
-
-PREVIOUS CONTENT:
----
-${previousContent}
----
-
-User's modification request: ${message}`;
+  if (isContinuation) {
+    userInstruction = `\n\nIMPORTANT: You are continuing to generate a research paper.
+The original user query was: "${message}".
+The contet of the previous response was: "${previousContent}".
+Please expand significantly upon the previous turn's response to ensure the entire research paper meets the goal of a comprehensive document of approximately 9,000-10,000 words.
+Focus on adding more depth, examples, analysis, and ensure all sections (introduction, main body, conclusion, biography) are well-developed.
+Ensure the biography has at least 25 entries.
+Do not repeat the title or introduction unless it's a natural continuation.
+The context from the previous turn is available to you via the conversation history (linked by previous_response_id).`;
   } else {
     // Instruction for initial generation
     userInstruction = `\n\nUser query: ${message}`;
