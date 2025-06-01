@@ -44,7 +44,6 @@ const initDB = (): Promise<IDBDatabase> => {
   });
 };
 
-// Function to add or update a history record
 export const addOrUpdateHistory = async (
   record: HistoryRecord
 ): Promise<void> => {
@@ -53,7 +52,7 @@ export const addOrUpdateHistory = async (
       const currentDb = await initDB();
       const transaction = currentDb.transaction(STORE_NAME, "readwrite");
       const store = transaction.objectStore(STORE_NAME);
-      const request = store.put(record); // 'put' adds or updates based on keyPath
+      const request = store.put(record);
 
       request.onsuccess = () => {
         console.log("History record saved:", record);
