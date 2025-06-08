@@ -28,6 +28,23 @@ export type ChatResponse = {
   response: string;
 };
 
+const extractJsonFromResponse = ({ str }: { str: string | null }) => {
+  if (!str) {
+    return {};
+  }
+  try {
+    return JSON.parse(str);
+  } catch (innerError) {
+    const firstIndex = str.indexOf("{");
+    const lastIndex = str.lastIndexOf("}");
+    try {
+      return JSON.parse(str.substring(firstIndex, lastIndex + 1));
+    } catch (e) {
+      return {};
+    }
+  }
+};
+
 export const MainPage = () => {
   const theme = useTheme();
   const { setHasModelResponse, hasModelResponse } = useUserContext();
@@ -111,12 +128,14 @@ export const MainPage = () => {
           type: "web_search_preview",
           search_context_size: "high",
         },
-        actualVectorStoreId
-          ? {
-              type: "file_search",
-              vector_store_ids: [actualVectorStoreId],
-            }
-          : {},
+        ...(actualVectorStoreId
+          ? [
+              {
+                type: "file_search",
+                vector_store_ids: [actualVectorStoreId],
+              },
+            ]
+          : []),
       ],
 
       tool_choice: "required",
@@ -141,13 +160,16 @@ export const MainPage = () => {
 
       setIsLoading(false);
 
-      const parsedContent = JSON.parse(data?.output?.[1]?.content[0].text);
-      const mainTextContent = parsedContent.content.content || "";
-      const title = parsedContent.content.title || "Research Paper";
+      const parsedContent = extractJsonFromResponse({
+        str: data?.output?.[1]?.content[0].text,
+      });
+
+      const mainTextContent = parsedContent?.content?.content || "";
+      const title = parsedContent?.content?.title || "Research Paper";
 
       setPreviousFullContent(mainTextContent);
 
-      setLastResponseId(data.id?.toString() || null);
+      setLastResponseId(data?.id?.toString() || null);
 
       setPaperTitle(title);
       setContent(mainTextContent);
